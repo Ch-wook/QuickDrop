@@ -1,0 +1,27 @@
+services:
+  quickdrop:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      ROOM_TTL: ${ROOM_TTL:-600000}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-104857600}
+      MAX_SESSION_BYTES: ${MAX_SESSION_BYTES:-209715200}
+      STUN_URL: ${STUN_URL-stun:stun.l.google.com:19302}
+      TURN_URL: ${TURN_URL:-}
+      TURN_USERNAME: ${TURN_USERNAME:-}
+      TURN_PASSWORD: ${TURN_PASSWORD:-}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
