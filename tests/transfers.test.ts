@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { Transfers } from '../client/transfers';
-import { CHUNK_SIZE, encodeChunk, type PublicConfig, type Transfer } from '../shared/protocol';
+import { CHUNK_SIZE, encodeChunk, MAX_HISTORY, type PublicConfig, type Transfer } from '../shared/protocol';
 
 class Channel extends EventTarget {
   readyState = 'open'; bufferedAmount = 0; bufferedAmountLowThreshold = 0; binaryType = 'arraybuffer';
@@ -74,4 +74,16 @@ it('stops a blocked sender when cancelled and marks interrupted text as failed',
 it('times out an unacknowledged transfer', () => {
   vi.useFakeTimers(); const app = setup(); app.engine.sendText('timeout');
   vi.advanceTimersByTime(60001); expect(app.records()[0].status).toBe('error');
+});
+it('still sends accepted files when a multi-file selection reaches the history limit', async () => {
+  const app = setup();
+  for (let index = 0; index < MAX_HISTORY - 1; index++) {
+    app.channel.receive({ type: 'TEXT', id: crypto.randomUUID(), text: `item ${index}` });
+  }
+  await vi.waitFor(() => expect(app.records()).toHaveLength(MAX_HISTORY - 1));
+  app.engine.sendFiles([new File(['first'], 'first.txt'), new File(['second'], 'second.txt')]);
+  await vi.waitFor(() => expect(app.records().at(-1)?.status).toBe('confirming'));
+  expect(app.records().at(-1)?.name).toBe('first.txt');
+  expect(app.records()).toHaveLength(MAX_HISTORY);
+  expect(app.errors).toContain('전송 기록이 가득 찼습니다. 기록을 비우고 다시 시도하세요.');
 });

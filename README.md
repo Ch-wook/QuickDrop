@@ -6,6 +6,8 @@
 
 ## 실행
 
+지금까지의 구현 현황과 남은 작업은 [PROJECT_STATUS.md](./PROJECT_STATUS.md), 전체 구성은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), 검사 결과는 [VALIDATION.md](./VALIDATION.md)를 참고하세요.
+
 Node.js **22.12 이상**(개발 검증: Node 24)을 설치한 뒤:
 
 ```sh
@@ -37,7 +39,11 @@ npm run dev:mobile
 
 production 빌드 후 공식 cloudflared를 SHA-256 검증하여 준비하고, 서버와 임시 HTTPS 터널을 함께 실행합니다. 출력된 HTTPS 주소를 **PC에서 먼저 연 뒤 그 화면의 QR을 휴대폰으로 스캔**하세요. `http://127.0.0.1:3001`도 현재 HTTPS 주소로 이동합니다. PC/프로세스를 종료하면 접속이 끊기고 재실행마다 주소가 바뀝니다. 상시 배포를 대신하는 기능은 아닙니다. 다운로드 파일과 터널 주소/로그는 Git에 포함되지 않습니다.
 
-고정된 서비스 주소를 사용할 때:
+임시 접속 상태 확인:
+
+임시 주소가 열리지 않으면 다른 터미널에서 `npm run mobile:status`를 실행하세요. 로컬 서버 중지, 오래된 주소, 공개 DNS/네트워크 오류를 구분합니다. `ready`인 경우에만 현재 주소를 출력합니다. 실행 중에는 30초마다 접속 상태를 확인하고 실패/복구 시 터미널에 알립니다.
+
+고정된 HTTPS 서비스를 구성하는 순서:
 
 1. 서버 앞에 HTTPS reverse proxy를 설정하거나, 본인이 신뢰하는 HTTPS 개발 터널을 연결합니다.
 2. `.env`에 `PUBLIC_URL=https://접근가능한주소`를 설정하고 서버를 다시 실행합니다.

@@ -7,10 +7,11 @@
 | 검사 | 결과 |
 |---|---|
 | `npm run check` | TypeScript 오류 없음 |
-| `npm test` | 5개 파일, **42개 통과** (QR 접속 수정 후) |
+| `npm test` | 6개 파일, **53개 통과** (안정성 보완 후) |
 | `npm run build` | 프런트엔드 및 서버 production bundle 생성 성공 |
 | production 서버 E2E | **8개 통과**, 4개 skip, 실패 없음 |
-| 공개 HTTPS 터널 E2E | **1개 통과**; 실제 HTTPS QR 해독 → WSS → WebRTC 텍스트/파일 |
+| 공개 HTTPS 터널 E2E | 이전 실행 **1개 통과**; 현재도 이전 주소가 유효함을 의미하지 않음 |
+| `npm run mobile:status` | 종료된 로컬 서버를 `stopped`로 판정하고 코드 1로 종료 |
 | `npm audit` | 의존성 설치 시 알려진 취약점 0개 |
 | `npm audit --omit=dev` | 최종 runtime dependency 취약점 0개 |
 | `git diff --check` | 오류 없음 |
@@ -68,6 +69,17 @@ QR은 렌더링된 PNG를 독립 decoder(jsQR)로 해독하여 실제 `/join/{ro
 - 이 검증은 실제 스마트폰 카메라/OS 검증을 의미하지 않습니다. 임시 터널은 PC가 켜져 있는 동안만 유지되며 상시 배포가 아닙니다.
 
 ## 배포 전 남은 확인
+
+### 후속 안정성 점검
+
+- 기록 299개 상태에서 파일 두 개 선택 시 먼저 선택한 파일도 전송 시작을 못 할 수 있는 문제를 수정하고 회귀 테스트를 추가했습니다.
+- IPv4-mapped IPv6 loopback/wildcard 및 확장 IPv6 loopback을 휴대폰 QR에서 제외했습니다.
+- 임시 터널은 이전 공개 HTTPS 검사 후 DNS `ENOTFOUND`가 관찰됐습니다. 이 상태를 숨기지 않도록 로컬 세션 확인과 공개 healthcheck를 분리한 상태 검사 명령을 추가했습니다.
+- 상태 검사 6개 사례와 URL 4개 사례, 파일 큐 1개 사례를 추가하여 총 53개 테스트가 통과했습니다.
+- 수정본의 production 빌드와 전체 E2E를 재실행하여 8개 통과, 4개 skip을 확인했습니다.
+- 상시 배포 및 고정 도메인은 아직 완료하지 않았습니다.
+
+### 외부 환경에서 필요한 확인
 
 1. 실제 휴대폰 두 대 또는 PC + 휴대폰에서 HTTPS 주소로 QR 스캔·전송·저장.
 2. 서로 다른 통신망에서 STUN-only 실패 안내와 TURN 경유 연결 확인.

@@ -44,6 +44,8 @@ QuickDrop/
 │  └─ connection-url.ts        휴대폰 QR에 쓸 수 있는 URL 판별
 ├─ scripts/
 │  ├─ mobile.mjs               HTTPS 터널 + production 서버 실행/정리
+│  ├─ mobile-health.mjs        로컬 세션 일치 및 공개 HTTPS 상태 검사
+│  ├─ mobile-status.mjs        npm run mobile:status 명령
 │  └─ cloudflared-release.json 고정된 공식 도구 버전과 SHA-256
 ├─ tests/
 │  ├─ rooms.test.ts            Room 수명, 2 Peer 제한, rate limit
@@ -51,6 +53,7 @@ QuickDrop/
 │  ├─ transfers.test.ts        전송 상태/ACK/취소/용량/타임아웃
 │  ├─ server.test.ts           실제 HTTP/WS, origin, TTL, canonical URL
 │  ├─ connection-url.test.ts   loopback/HTTP/HTTPS 주소 회귀 테스트
+│  ├─ mobile-health.test.mjs   종료/오래된 주소/DNS 실패 회귀 검사
 │  └─ e2e/
 │     ├─ quickdrop.spec.ts     같은 엔진 두 컨텍스트의 전송 전체 흐름
 │     ├─ interoperability.spec.ts Chromium ↔ Firefox 실제 전송
@@ -69,6 +72,7 @@ QuickDrop/
 ├─ .gitignore / .dockerignore
 ├─ README.md                  사용/개발/운영 설명
 ├─ PROJECT_STRUCTURE.md       이 문서
+├─ PROJECT_STATUS.md          진행 현황, 수정 이력, 남은 작업
 └─ VALIDATION.md              실제 검증 결과와 미검증 범위
 ```
 
@@ -180,6 +184,8 @@ npm run dev:mobile
 표시되는 `https://...trycloudflare.com`을 **PC에서 먼저 열고**, 그 화면의 QR을 휴대폰에서 스캔합니다. `http://127.0.0.1:3001`도 현재 HTTPS 주소로 이동합니다. 기본 모바일 전용 포트는 3001이며 `MOBILE_PORT`로 변경할 수 있습니다.
 
 이 방식은 임시 개발 접속입니다. PC와 프로세스가 켜져 있어야 하며 재실행마다 URL이 바뀝니다. 최초 실행에는 공식 GitHub release 다운로드가 필요합니다. 프런트 소스나 Vite 개발 서버를 공개하지 않고 production 결과만 제공합니다. Cloudflare는 웹/연결 중개 트래픽을 처리하지만 파일 payload는 여전히 WebRTC를 사용합니다.
+
+`npm run mobile:status`로 로컬 서버와 공개 HTTPS의 실제 응답을 확인합니다. 실행 정보 파일만 남은 경우를 정상 실행으로 간주하지 않습니다. 실행 중에는 30초 간격으로 확인하고 실패/복구 시 알립니다.
 
 ### 상시 운영 배포
 

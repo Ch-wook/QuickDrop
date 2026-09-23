@@ -1,0 +1,169 @@
+# QuickDrop 프로젝트 진행 현황
+
+최종 정리일: **2026-09-23**. 구현 범위, 수정 이력, 검증 결과, 실행 방법과 남은 작업을 정리합니다.
+
+## 1. 현재 상태
+
+**로컬에서 실행하고 검증할 수 있는 양방향 전송 MVP가 구현되어 있습니다.** 두 브라우저를 연결해 텍스트·링크·이미지·파일을 주고받습니다. 저장소는 [Ch-wook/QuickDrop](https://github.com/Ch-wook/QuickDrop), 브랜치는 `main`입니다.
+
+상시 호스팅 배포와 짧은 고정 도메인 발급은 **미완료**입니다. Railway용 Docker/healthcheck 설정은 준비되어 있지만 배포 계정 연결이 확인되지 않았습니다. 이전 `trycloudflare.com` 주소는 일회성 개발 터널이며 고정 서비스 주소가 아닙니다.
+
+## 2. 서비스 목적
+
+`웹사이트 열기 → QR 또는 코드로 연결 → 자료 보내기`가 기본 흐름입니다.
+
+- Device A와 Device B는 동등하며 모두 송신/수신할 수 있습니다.
+- 로그인, 회원가입, 앱 설치, 계정 DB가 없습니다.
+- 서버는 연결 중개와 Room 관리만 담당합니다.
+- 실제 전송은 WebRTC를 사용하며 텍스트/파일을 서버에 영구 저장하지 않습니다.
+- 두 기기에서 브라우저 페이지를 열어두어야 합니다.
+
+## 3. 구현 완료 기능
+
+| 구분 | 구현 내용 |
+|---|---|
+| 연결 | 임시 Room, HTTPS QR, 6자리 코드, 최대 2 Peer |
+| 협상 | WebSocket offer/answer/ICE, 참가 순서로 initiator 결정 |
+| 전송 | 암호화된 reliable/ordered RTCDataChannel |
+| 텍스트/URL | 자동 URL 판별, 표시, 복사, 새 탭 열기 |
+| 이미지 | JPEG/PNG/WebP preview, 이름·크기, 다운로드 |
+| 파일 | 일반 binary, 다중 파일 큐, 16KiB 청크, 수신 Blob |
+| 상태 | 양쪽 진행률, 수신 ACK, 취소, 오류/타임아웃 |
+| 입력 | 첨부, 드래그 앤 드롭, 이미지/파일 paste, Ctrl/⌘+Enter |
+| 세션 | 메모리 기록, 기록 비우기, Blob URL 해제, 퇴장·재참가 |
+| 서버 | 대기 TTL, 빈 Room 삭제, heartbeat, rate limit |
+| 화면 | 한국어 반응형 UI, label/focus, 키보드 도움말 |
+| 실행 | dev 명령, production 빌드, Docker/Compose/Railway 설정 |
+
+## 4. 지금까지 수정한 문제
+
+### 휴대폰 QR 접속 거부
+
+PC에서 만든 QR에 `localhost:3000`이 들어가 있었습니다. 휴대폰은 이 주소를 자기 자신으로 해석하므로 PC 서버에 연결되지 않았습니다.
+
+수정 내용:
+
+1. localhost, IPv4/IPv6 loopback, wildcard 주소에서 휴대폰 QR을 표시하지 않습니다. IPv4-mapped IPv6 loopback도 검사합니다.
+2. 일반 HTTP 주소에는 HTTPS 필요 안내를 제공합니다.
+3. 같은 PC의 다른 창 테스트는 로컬 연결 링크로 유지합니다.
+4. `npm run dev:mobile`이 공식 cloudflared를 SHA-256 검증 후 실행하고 임시 HTTPS와 production 서버를 함께 준비합니다.
+5. `PUBLIC_URL`이 설정되면 로컬 페이지를 정식 HTTPS 주소로 이동해 PC와 휴대폰의 origin을 맞춥니다.
+
+### Firefox의 정상 퇴장 처리
+
+DataChannel 종료 이벤트가 `PEER_LEFT`보다 먼저 도착하는 경우 짧은 유예를 두어 정상 퇴장은 대기 상태로 돌아가도록 수정했습니다. 같은 Room 재참가까지 검사했습니다.
+
+### 기록 한도에서 파일 큐가 멈추는 문제
+
+기록이 299개일 때 파일 두 개를 선택하면 첫 파일은 대기열에 들어가지만 다음 파일 추가 시 예외로 인해 전송 시작까지 도달하지 못할 수 있었습니다.
+
+이제 한도 초과 파일만 추가하지 않고 안내하며, **이미 수락한 파일은 계속 전송**합니다. 해당 조건을 직접 재현하는 회귀 테스트를 추가했습니다.
+
+### 종료되거나 접근 불가능한 임시 주소
+
+강제 종료 후 `.quickdrop/mobile.json`만 남을 수 있고, 로컬 서버가 살아 있어도 공개 터널의 DNS/접속이 실패할 수 있습니다. 이전 실행에서도 HTTPS E2E 통과 후 `ENOTFOUND`가 관찰됐으므로 URL 파일의 존재만으로 접속 가능하다고 판단하지 않습니다.
+
+- `npm run mobile:status`가 로컬 세션 일치를 확인한 뒤 공개 HTTPS healthcheck까지 검사합니다.
+- 실행 중에는 30초마다 확인하고 상태가 실패/복구로 바뀌면 터미널에 알립니다.
+- 중지, 오래된 URL, 공개 DNS/네트워크 오류를 구분합니다.
+- 기존 Room을 자동으로 새 Room으로 바꾸지 않습니다. 계속 실패하면 실행을 다시 시작하고 새 QR을 사용합니다.
+
+## 5. 프로젝트 구성
+
+| 경로 | 역할 |
+|---|---|
+| `client/` | React UI, Peer 연결, 파일 전송, 기록/미리보기 |
+| `server/` | Express API, WebSocket, Room/TTL/rate limit, 환경 변수 |
+| `shared/` | 공통 schema/타입, chunk 조립, 파일명/URL 검증 |
+| `scripts/` | 모바일 HTTPS 실행과 현재 접속 상태 검사 |
+| `tests/` | 단위/통합, 브라우저·교차 엔진·HTTPS E2E |
+| `Dockerfile`, `compose.yaml` | production 컨테이너 |
+| `railway.json` | Docker 빌드, healthcheck, 1 replica 배포 설정 |
+
+상세 파일 트리, 프로토콜, 환경 변수와 연결 diagram은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)에 있습니다.
+
+## 6. 검증 결과
+
+| 검사 | 결과 |
+|---|---|
+| 단위·통합 | **6개 파일, 53개 통과** |
+| TypeScript | 통과 |
+| production 빌드 | 프런트·서버 생성 성공 |
+| production E2E | **8개 통과**, 4개 skip |
+| 공개 HTTPS E2E | 앞선 실행에서 **1개 통과**; QR 해독, WSS, 실제 WebRTC 텍스트/파일 |
+| 모바일 상태 명령 | 종료된 로컬 서버를 `stopped`로 판정함을 실제 확인 |
+| 상태 검사 회귀 | 중지, 세션 불일치, DNS 실패, 정상/잘못된 응답 |
+| 실기기/외부 TURN | 미검증 |
+| Docker 실행 | Docker CLI가 없어 미검증 |
+| 상시 배포/고정 도메인 | 미완료 |
+
+4개 skip 중 2개는 Windows WebKit의 WebRTC API 부재, 나머지 2개는 교차 엔진 검사의 중복 실행 제외입니다. Chromium/Firefox의 실제 전송과 Windows WebKit의 UI/오류 안내를 검증했습니다. 실제 Safari·iPhone·Android 검증을 대체하지 않습니다.
+
+공개 HTTPS 테스트 통과는 이전 주소가 현재도 살아 있다는 의미가 아닙니다. 상세 기록은 [VALIDATION.md](./VALIDATION.md)에 있습니다.
+
+## 7. 실행 방법
+
+같은 PC에서 개발:
+
+```sh
+npm install
+npm run dev
+```
+
+`http://localhost:3000`에서 다른 브라우저/시크릿 창을 연결합니다.
+
+휴대폰 확인:
+
+```sh
+npm run dev:mobile
+```
+
+터미널의 **새 HTTPS 주소를 PC에서 먼저 열고** 해당 QR을 휴대폰으로 스캔합니다. PC와 실행 터미널을 켜두어야 하며 재실행마다 주소가 바뀝니다.
+
+다른 터미널에서 현재 접속 상태 확인:
+
+```sh
+npm run mobile:status
+```
+
+`ready`일 때 주소를 출력하고 코드 0으로 종료합니다. 중지/불일치/접속 실패는 설명과 함께 코드 1로 종료합니다.
+
+검증 명령:
+
+```sh
+npm run check
+npm test
+npm run build
+npm run test:e2e
+```
+
+production 및 외부 HTTPS E2E 명령은 README에 있습니다.
+
+## 8. 제한과 보안
+
+- 파일당 100MiB, 수신 보관 합계 200MiB, 파일 큐 20개, 기록 300개.
+- Room 최대 2 Peer, 대기 TTL 10분, JOIN IP당 분당 10회.
+- QR/코드를 아는 사람은 참가할 수 있으며 별도 사용자 인증은 없습니다.
+- HTTPS/WSS, origin/schema/payload 검사, 파일명 정제, React escaping 적용.
+- 새로고침/새 연결/서버 재시작 후 기록이나 전송은 복구하지 않습니다.
+- 일부 NAT/방화벽에는 TURN이 필요합니다. 공개 운영용 credential은 단기 발급 방식을 적용해야 합니다.
+- `.env`, 로컬 로그/터널 상태/실행 파일, 테스트 산출물은 Git에서 제외합니다.
+
+## 9. 남은 작업
+
+| 순서 | 작업 | 필요한 조건 |
+|---|---|---|
+| 1 | Railway 상시 배포, 짧은 기본 도메인 | 계정 연결, 사용 가능한 플랜 확인 |
+| 2 | 실제 iPhone/Android QR·전송·저장 | 실기기와 접근 가능한 HTTPS |
+| 3 | 서로 다른 통신망 및 TURN 확인 | TURN/단기 credential |
+| 4 | Docker 실행/healthcheck 검증 | Docker 실행 환경 |
+| 5 | 100MiB 경계·장시간·백그라운드 | 실기기 메모리/네트워크 검증 |
+
+Remember Device, PWA, Share Target, 3대 이상 연결, Offline Drop, Push, Transfer Resume는 원래 MVP 범위 밖이며 미구현입니다.
+
+## 10. 문서 안내
+
+- [README.md](./README.md): 사용 및 개발 시작
+- [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md): 전체 코드/인프라 구성
+- [PROJECT_STATUS.md](./PROJECT_STATUS.md): 진행 현황과 작업 인수인계
+- [VALIDATION.md](./VALIDATION.md): 실제 검사 결과 및 한계

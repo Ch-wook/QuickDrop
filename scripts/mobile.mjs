@@ -7,6 +7,7 @@ import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { inspectMobileSession } from './mobile-health.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const stateDir = path.join(root, '.quickdrop');
@@ -15,10 +16,12 @@ const port = Number(process.env.MOBILE_PORT || 3001);
 const children = new Set();
 let stopping = false;
 let log;
+let healthTimer;
 
 async function shutdown(code = 0) {
   if (stopping) return;
   stopping = true;
+  clearInterval(healthTimer);
   for (const child of children) child.kill();
   try {
     const state = JSON.parse(await readFile(statePath, 'utf8'));
@@ -104,7 +107,17 @@ async function run() {
     try {
       const response = await fetch(`${publicUrl}/api/config`, { signal: AbortSignal.timeout(5000) });
       if (response.ok && (await response.json()).publicUrl === publicUrl) {
-        await writeFile(statePath, JSON.stringify({ publicUrl, localUrl: `http://127.0.0.1:${port}`, pid: process.pid, startedAt: new Date().toISOString() }, null, 2));
+        const session = { publicUrl, localUrl: `http://127.0.0.1:${port}`, pid: process.pid, startedAt: new Date().toISOString() };
+        await writeFile(statePath, JSON.stringify(session, null, 2));
+        let previousStatus = 'ready';
+        healthTimer = setInterval(async () => {
+          const health = await inspectMobileSession(session);
+          if (stopping) return;
+          if (health.status !== previousStatus) {
+            console.log(`\n[${health.status}] ${health.message}\n`);
+            previousStatus = health.status;
+          }
+        }, 30000);
         console.log(`\nQuickDrop mobile is ready: ${publicUrl}\nOpen this HTTPS address on the PC, then scan its QR with your phone.\nLocal shortcut: http://127.0.0.1:${port} (redirects to HTTPS)\nCtrl+C stops the server and the tunnel. The address changes on each run.\n`);
         return;
       }

@@ -75,6 +75,7 @@ export class Transfers {
   }
   sendFiles(files: File[]) {
     for (const file of files) {
+      if (this.records.size >= MAX_HISTORY) { this.error('전송 기록이 가득 찼습니다. 기록을 비우고 다시 시도하세요.'); break; }
       if (file.size > this.config.maxFileSize) { this.error(`${file.name}: 최대 파일 크기를 초과했습니다.`); continue; }
       if (this.queued.length >= 20) { this.error('한 번에 최대 20개 파일을 대기열에 넣을 수 있습니다.'); break; }
       const id = crypto.randomUUID();
