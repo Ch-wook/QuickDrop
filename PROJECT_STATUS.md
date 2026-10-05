@@ -1,6 +1,8 @@
 # QuickDrop 프로젝트 진행 현황
 
-최종 정리일: **2026-09-23**. 구현 범위, 수정 이력, 검증 결과, 실행 방법과 남은 작업을 정리합니다.
+최종 정리일: **2026-10-06**. 구현 범위, 수정 이력, 검증 결과, 실행 방법과 남은 작업을 정리합니다.
+
+이번 출시 준비에서 coturn REST 방식의 임시 TURN 인증정보 발급과 설정 API 요청 제한을 추가했습니다. 현재 검사 결과는 단위·통합 58개, production E2E 8개 통과/4개 skip, 운영 빌드 통과, audit 취약점 0개입니다. 아래 이전 검사 수치는 해당 작업 당시 기록입니다. 도메인·배포·운영 절차와 현재 차단 조건은 [DEPLOYMENT.md](./DEPLOYMENT.md)에 정리했습니다. Railway 계정 연결은 아직 확인되지 않아 상시 배포와 도메인 발급은 미완료입니다.
 
 ## 1. 현재 상태
 
@@ -146,7 +148,7 @@ production 및 외부 HTTPS E2E 명령은 README에 있습니다.
 - QR/코드를 아는 사람은 참가할 수 있으며 별도 사용자 인증은 없습니다.
 - HTTPS/WSS, origin/schema/payload 검사, 파일명 정제, React escaping 적용.
 - 새로고침/새 연결/서버 재시작 후 기록이나 전송은 복구하지 않습니다.
-- 일부 NAT/방화벽에는 TURN이 필요합니다. 공개 운영용 credential은 단기 발급 방식을 적용해야 합니다.
+- 일부 NAT/방화벽에는 TURN이 필요합니다. `TURN_SECRET`을 통한 임시 인증정보 발급은 구현됐으며 실제 운영 TURN 서버 연결과 검증이 남아 있습니다.
 - `.env`, 로컬 로그/터널 상태/실행 파일, 테스트 산출물은 Git에서 제외합니다.
 
 ## 9. 남은 작업
@@ -167,3 +169,4 @@ Remember Device, PWA, Share Target, 3대 이상 연결, Offline Drop, Push, Tran
 - [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md): 전체 코드/인프라 구성
 - [PROJECT_STATUS.md](./PROJECT_STATUS.md): 진행 현황과 작업 인수인계
 - [VALIDATION.md](./VALIDATION.md): 실제 검사 결과 및 한계
+- [DEPLOYMENT.md](./DEPLOYMENT.md): 출시 주소·환경 설정·검증·복구 절차

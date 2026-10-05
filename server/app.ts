@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Rooms, RateLimiter } from './rooms';
 import { signalSchema, type ServerSignal } from '../shared/protocol';
 import type { Config } from './config';
+import { clientIceServers } from './ice';
 
 export function createApp(config: Config) {
   const app = express();
@@ -13,6 +14,7 @@ export function createApp(config: Config) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 40000, perMessageDeflate: false });
   const peers = new Map<string, { ws: WebSocket; roomId?: string; alive: boolean }>();
   const createLimit = new RateLimiter(30, 60000);
+  const configLimit = new RateLimiter(120, 60000);
   const connectLimit = new RateLimiter(40, 60000);
   const joinLimit = new RateLimiter(config.joinRateLimit, 60000);
   const signalLimit = new RateLimiter(300, 60000);
@@ -43,7 +45,10 @@ export function createApp(config: Config) {
   });
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
   app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
-  app.get('/api/config', (_req, res) => res.json({ publicUrl: config.publicUrl, maxFileSize: config.maxFileSize, maxSessionBytes: config.maxSessionBytes, iceServers: config.iceServers }));
+  app.get('/api/config', (req, res) => {
+    if (!configLimit.allow(req.ip || 'unknown')) return res.status(429).json({ error: '요청이 너무 많습니다. 1분 후 다시 시도하세요.' });
+    return res.json({ publicUrl: config.publicUrl, maxFileSize: config.maxFileSize, maxSessionBytes: config.maxSessionBytes, iceServers: clientIceServers(config) });
+  });
   app.post('/api/rooms', (req, res) => {
     if (!originAllowed(req.headers.origin, req.headers.host)) return res.status(403).json({ error: '허용되지 않은 요청입니다.' });
     if (!createLimit.allow(req.ip || 'unknown')) return res.status(429).json({ error: '요청이 너무 많습니다. 1분 후 다시 시도하세요.' });
@@ -114,7 +119,7 @@ export function createApp(config: Config) {
       const peer = peers.get(id);
       if (peer) { send(peer.ws, { type: 'ROOM_EXPIRED' }); peer.ws.close(1000, 'Room expired'); }
     }
-    for (const limit of [createLimit, connectLimit, joinLimit, signalLimit]) limit.sweep();
+    for (const limit of [createLimit, configLimit, connectLimit, joinLimit, signalLimit]) limit.sweep();
   }, Math.min(config.roomTtl, 5000));
   const heartbeat = setInterval(() => {
     for (const peer of peers.values()) {

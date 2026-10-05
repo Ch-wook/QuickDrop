@@ -24,6 +24,26 @@ async function setup(roomTtl = 10000) {
   return { ...app, origin, create, connect };
 }
 describe('HTTP and WebSocket integration', () => {
+  it('serves uncached temporary TURN credentials without disclosing the shared secret', async () => {
+    const secret = 'test-shared-secret-with-at-least-32-characters';
+    const runtime = createApp({ ...config, publicUrl: '', turnSecret: secret, iceServers: [{ urls: ['turn:relay.example.com:3478'], username: undefined, credential: undefined }] });
+    await new Promise<void>(resolve => runtime.server.listen(0, '127.0.0.1', resolve));
+    cleanups.push(runtime.close);
+    const origin = `http://127.0.0.1:${(runtime.server.address() as { port: number }).port}`;
+    const response = await fetch(`${origin}/api/config`);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    const data = await response.json();
+    expect(JSON.stringify(data)).not.toContain(secret);
+    expect(data).not.toHaveProperty('turnSecret');
+    expect(data.iceServers[0].username).toMatch(/^\d+:[a-f0-9-]+$/);
+    const second = await (await fetch(`${origin}/api/config`)).json();
+    expect(second.iceServers[0].credential).not.toBe(data.iceServers[0].credential);
+  });
+  it('limits configuration requests that can issue relay credentials', async () => {
+    const app = await setup();
+    for (let i = 0; i < 120; i++) expect((await fetch(`${app.origin}/api/config`)).status).toBe(200);
+    expect((await fetch(`${app.origin}/api/config`)).status).toBe(429);
+  });
   it('creates rooms only from the same origin', async () => {
     const app = await setup();
     expect((await app.create()).status).toBe(201);

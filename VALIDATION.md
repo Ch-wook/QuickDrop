@@ -1,5 +1,16 @@
 # QuickDrop 검증 기록
 
+## 2026-10-06 출시 준비 재검증
+
+- `npm test`: 7개 파일, **58개 통과**. TURN 임시 인증의 만료 timestamp·coturn 서명·요청별 독립성과 비밀키 비노출, 설정 API 캐시 금지·rate limit 포함.
+- `npm run build`: TypeScript 검사 및 production 프런트/서버 빌드 통과.
+- production E2E: **8개 통과, 4개 skip**, 실패 없음. skip은 중복 교차 엔진 검사 2개와 Windows WebKit의 WebRTC 미지원 검사 2개.
+- `npm audit --json`: 알려진 취약점 **0개**.
+- 원격 배포 및 공개 주소 E2E는 Railway 계정 연결이 없어 미실행. 운영 TURN 서버·실제 iPhone/Android·Docker 실행은 여전히 미검증.
+- 상세 배포 상태: [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+아래는 2026-09-23 당시의 검사 기록입니다.
+
 검증일: 2026-09-23 (Asia/Seoul). 환경: Windows, Node.js v24.15.0, npm 11.12.1.
 
 ## 최종 결과

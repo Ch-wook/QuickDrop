@@ -8,6 +8,8 @@
 
 지금까지의 구현 현황과 남은 작업은 [PROJECT_STATUS.md](./PROJECT_STATUS.md), 전체 구성은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), 검사 결과는 [VALIDATION.md](./VALIDATION.md)를 참고하세요.
 
+출시 주소 결정, Railway 설정, TURN 인증, 배포 후 검사 및 복구 절차는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 있습니다. 현재 상시 배포와 고정 주소는 계정 연결 대기 상태입니다.
+
 Node.js **22.12 이상**(개발 검증: Node 24)을 설치한 뒤:
 
 ```sh
@@ -150,6 +152,8 @@ DataChannel은 reliable/ordered 모드이며 다음 메시지를 교환합니다
 | `TURN_URL` | 없음 | 선택 TURN URL, 여러 개는 쉼표 구분 |
 | `TURN_USERNAME` | 없음 | 선택 TURN 사용자 |
 | `TURN_PASSWORD` | 없음 | 선택 TURN credential |
+| `TURN_SECRET` | 없음 | coturn REST 인증용 공유 비밀키, 최소 32자; 서버에만 보관 |
+| `TURN_CREDENTIAL_TTL` | `3600` | 임시 TURN 인증 유효 시간(초), 600~86400 |
 | `TRUST_PROXY` | `0` | 신뢰할 reverse proxy hop 수, 정확히 설정 |
 | `JOIN_RATE_LIMIT` | `10` | IP당 분당 JOIN 시도, 기본값 유지 권장 |
 
@@ -216,13 +220,13 @@ docker compose down
 - React escaping, HTTP(S) 링크만 활성화, `noopener noreferrer`, 파일명 정제, 미리보기 MIME allowlist, 임의 HTML 렌더링/파일 자동 실행 없음
 - 송수신 파일 크기 제한은 정상 클라이언트가 강제합니다. 다운로드한 파일의 내용이 안전하다는 보장은 없으며 바이러스 검사 기능은 없습니다.
 - WebRTC는 Peer IP 정보를 교환할 수 있습니다. STUN/TURN 운영자는 연결 metadata를 볼 수 있습니다.
-- `TURN_PASSWORD`는 서버 환경 변수지만 브라우저가 TURN에 접속하려면 `/api/config`로 credential을 받습니다. **공개 배포에 장기 공용 TURN 비밀번호를 쓰지 마세요.** 제한된 테스트 계정을 사용하거나, 배포 전에 짧은 수명의 TURN credential 발급 방식으로 교체하세요.
+- 공개 TURN에는 `TURN_SECRET`으로 만료되는 coturn REST 인증정보를 발급할 수 있습니다. 서버 비밀키는 브라우저에 전달하지 않으며 `/api/config`는 캐시 금지·IP별 요청 제한을 적용합니다. 고정 `TURN_PASSWORD` 방식은 제한된 테스트 계정용입니다. 실제 TURN 서버 연결, 할당량 설정, 인증 만료/장시간 전송 검증은 별도 필요합니다. 상세 내용은 [배포 문서](./DEPLOYMENT.md)를 참고하세요.
 - reverse proxy access log는 `/join/{roomId}` URL을 기록할 수 있으므로 공개 운영 시 해당 경로의 기록을 마스킹/제외하세요. 앱은 전송 내용을 기록하지 않습니다.
 
 ## 이후 개발 우선순위
 
 1. 실제 iPhone Safari / Android Chrome 및 서로 다른 통신망 QA, TURN 연결 검증
-2. 공개 운영용 단기 TURN credential, 연결 상대 확인 UX
+2. 운영 TURN 인증 갱신과 장시간 검증, 연결 상대 확인 UX
 3. 필요에 따라 전송 resume, 메모리 대신 디스크로 스트리밍 수신
 4. Remember Device, PWA, Share Target, Multiple Devices는 별도 확장
 5. Offline Drop/Push는 명시적인 암호화·임시 보관 설계를 거친 별도 기능

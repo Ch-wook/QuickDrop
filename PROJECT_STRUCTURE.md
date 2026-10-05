@@ -38,6 +38,7 @@ QuickDrop/
 │  ├─ index.ts                 개발/운영 서버 진입점, 종료 처리
 │  ├─ app.ts                   API, WS upgrade, origin 검사, heartbeat
 │  ├─ config.ts                환경 변수 읽기, 범위와 PUBLIC_URL 검증
+│  ├─ ice.ts                   coturn REST 임시 인증정보 발급, 비밀키 서버 보관
 │  └─ rooms.ts                 Room 생성/참가/삭제/TTL, rate limiter
 ├─ shared/
 │  ├─ protocol.ts              메시지 타입/schema, chunk framing/조립
@@ -52,6 +53,7 @@ QuickDrop/
 │  ├─ protocol.test.ts         메시지, URL, 파일명, chunk 조립
 │  ├─ transfers.test.ts        전송 상태/ACK/취소/용량/타임아웃
 │  ├─ server.test.ts           실제 HTTP/WS, origin, TTL, canonical URL
+│  ├─ ice.test.ts              TURN 인증 만료·서명·독립성·비밀키 비노출
 │  ├─ connection-url.test.ts   loopback/HTTP/HTTPS 주소 회귀 테스트
 │  ├─ mobile-health.test.mjs   종료/오래된 주소/DNS 실패 회귀 검사
 │  └─ e2e/
