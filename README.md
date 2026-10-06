@@ -8,7 +8,7 @@
 
 지금까지의 구현 현황과 남은 작업은 [PROJECT_STATUS.md](./PROJECT_STATUS.md), 전체 구성은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), 검사 결과는 [VALIDATION.md](./VALIDATION.md)를 참고하세요.
 
-서비스 주소: https://dropgo.up.railway.app . 기존 운영 서버의 공개 QR/전송 검증을 통과했습니다. 최신 최적화본의 재배포 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md), 개선 내용과 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
+서비스 주소: **https://dropgo.up.railway.app**. 2026-10-06 최적화본 배포를 완료했으며 Chromium·Firefox에서 공개 QR 연결과 실제 텍스트·파일 전송을 검증했습니다. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 개선 내용과 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
 
 Node.js **22.12 이상**(개발 검증: Node 24)을 설치한 뒤:
 
@@ -130,7 +130,7 @@ DataChannel은 reliable/ordered 모드이며 다음 메시지를 교환합니다
 | `TRANSFER_CANCEL` | 양쪽 전송 취소 |
 | `TRANSFER_ERROR` | 수신 제한/타임아웃 등 오류 |
 
-파일 payload는 **16KiB**씩 읽습니다. 40-byte 헤더를 포함해 브라우저 간 메시지 크기 차이를 보수적으로 처리합니다. `bufferedAmount`가 1MiB를 넘으면 기다리고 `bufferedamountlow` 이벤트와 종료/타임아웃을 확인합니다. 수신자는 순서·총 크기를 검사하고 완성된 Blob만 다운로드 가능하게 합니다. DataChannel의 암호화·무결성·reliable transport를 사용하며 별도 애플리케이션 파일 해시는 보내지 않습니다.
+파일은 최대 **256KiB**씩 묶어 읽고, 전송 payload는 **16KiB** 청크로 나눕니다. 각 청크의 40-byte 헤더를 포함해 브라우저 간 메시지 크기 차이를 보수적으로 처리합니다. `bufferedAmount`가 1MiB를 넘으면 기다리고 `bufferedamountlow` 이벤트와 종료/타임아웃을 확인합니다. 수신자는 순서·총 크기를 검사하고 완성된 Blob만 다운로드 가능하게 합니다. DataChannel의 암호화·무결성·reliable transport를 사용하며 별도 애플리케이션 파일 해시는 보내지 않습니다.
 
 파일별/누적 수신 용량, 대기열 20개, 기록 300개, 활성 수신 파일 2개 제한으로 메모리 사용을 제한합니다. 완료된 수신 Blob은 기록을 비우거나 세션을 종료하면 해제됩니다. 전송 중 기록 비우기는 완료/실패/취소 기록만 지웁니다. 타임아웃은 60초이며 전송 재개는 지원하지 않습니다.
 

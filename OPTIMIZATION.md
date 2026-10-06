@@ -1,6 +1,6 @@
 # QuickDrop 최적화 기록
 
-검증일: 2026-10-06. 기존 운영 주소는 https://dropgo.up.railway.app 입니다. 아래 성능 개선은 새 로컬 빌드에서 검증했으며, 운영 서버에 반영됐는지는 `npm run deploy:verify -- https://dropgo.up.railway.app`로 별도 확인합니다.
+검증일: 2026-10-06. 최적화본을 https://dropgo.up.railway.app 에 배포했습니다. 아래 측정은 로컬 빌드 기준이며, 운영 서버가 같은 JS/CSS와 압축·캐시 설정을 제공하는 것은 `npm run deploy:verify -- https://dropgo.up.railway.app` 통과로 확인했습니다.
 
 ## 측정 결과
 
@@ -34,20 +34,20 @@
 - 단위/통합: **9개 파일, 83개 통과**.
 - TypeScript/운영 빌드: 통과.
 - 새 로컬 운영 빌드 E2E: **8개 통과, 4개 skip**. skip은 중복 교차 엔진 2개와 Windows WebKit의 WebRTC 미지원 2개입니다.
-- 기존 운영 서버 공개 HTTPS E2E: **1개 통과**. QR 해독, WSS, 실제 DataChannel, 텍스트·파일 및 다운로드 byte 일치를 검사했습니다. 새 빌드의 배포 완료를 의미하지 않습니다.
+- 배포된 최적화본 공개 HTTPS E2E: **Chromium·Firefox 2개 통과, 16.0초**. QR 해독, WSS, 실제 DataChannel, 텍스트 및 72,000-byte 파일의 다운로드 일치를 검사했습니다.
 - `npm audit --json`: 알려진 취약점 **0개**.
 - 압축 검사는 실제 HTTP 응답을 Brotli/gzip 해제하여 원본과 비교하고, encoding q=0·identity·406·HEAD·304·경로 접근·캐시를 검사합니다.
 - 새 배포 판별: healthcheck와 PUBLIC_URL 외에 HTML의 자산 해시, JS/CSS 실제 내용, 압축 및 캐시 설정을 검증합니다.
 
 ## 배포 확인
 
-운영 주소는 현재 정상 응답합니다. 다만 최적화 전 JS `index-SvvQ1p9v.js`를 제공 중이고 이번 빌드의 진입 JS는 `index-DlbgtMzG.js`입니다. 현재 배포 도구 인증은 `Unauthorized`여서 직접 재배포 실행은 확인되지 않았습니다. 최신 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md)를 참고하세요.
+배포 코드 `91aba3b`의 Railway 배포가 성공했습니다. 공개 서버가 `index-DlbgtMzG.js`와 `index-DFBmzxZh.css`를 제공하며 로컬 빌드와 해시·내용이 일치합니다. Brotli/캐시 응답, healthcheck 및 PUBLIC_URL도 검증했습니다. CLI는 여전히 `Unauthorized`이지만 GitHub Source로 배포를 완료했습니다. 후속 푸시만으로 자동 배포가 시작되는지는 미검증입니다. 배포 ID와 상세 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md)를 참고하세요.
 
 ```powershell
 npm run build
 npm run deploy:verify -- https://dropgo.up.railway.app
 $env:E2E_BASE_URL = 'https://dropgo.up.railway.app'
-npm run test:e2e -- --project=chromium
+npm run test:e2e -- --project=chromium --project=firefox
 Remove-Item Env:E2E_BASE_URL
 ```
 

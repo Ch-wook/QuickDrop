@@ -2,15 +2,15 @@
 
 최종 정리일: **2026-10-06**. 구현 범위, 수정 이력, 검증 결과, 실행 방법과 남은 작업을 정리합니다.
 
-최적화본 검사 결과: 단위·통합 **83개 통과**, production E2E **8개 통과/4개 skip**, 빌드 통과, audit 취약점 **0개**. QR 코드 분리, 전송 읽기 묶음, 제한기 성능, 압축/캐시, TURN 갱신, 연결 종료 처리를 개선했습니다. 자세한 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다. 아래 이전 검사 수치는 당시 기록입니다.
+최적화본 검사 결과: 단위·통합 **83개 통과**, 로컬 production E2E **8개 통과/4개 skip**, 공개 E2E **2개 통과**, 빌드 통과, audit 취약점 **0개**. QR 코드 분리, 전송 읽기 묶음, 제한기 성능, 압축/캐시, TURN 갱신, 연결 종료 처리를 개선했습니다. 자세한 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
 
-사용자가 제공한 Railway 화면에서 기존 서비스를 확인했습니다. https://dropgo.up.railway.app 에서 공개 QR/전송 E2E도 1개 통과했습니다. CLI는 여전히 `Unauthorized`이며 기존 운영 서버는 이전 빌드를 제공 중이므로, 새 최적화본의 재배포 완료와는 구분합니다. 상세 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md)를 참고하세요.
+최적화본 코드 `91aba3b`가 https://dropgo.up.railway.app 에 배포됐습니다. 로컬 빌드와 공개 JS/CSS의 해시·내용 및 Brotli/캐시 설정 일치를 확인하고 Chromium·Firefox에서 실제 QR/WSS/WebRTC 전송을 검증했습니다. 상세 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md)를 참고하세요.
 
 ## 1. 현재 상태
 
-**로컬에서 실행하고 검증할 수 있는 양방향 전송 MVP가 구현되어 있습니다.** 두 브라우저를 연결해 텍스트·링크·이미지·파일을 주고받습니다. 저장소는 [Ch-wook/QuickDrop](https://github.com/Ch-wook/QuickDrop), 브랜치는 `main`입니다.
+**양방향 전송 MVP의 구현·최적화·Railway 배포를 완료했습니다.** 두 브라우저를 연결해 텍스트·링크·이미지·파일을 주고받습니다. 저장소는 [Ch-wook/QuickDrop](https://github.com/Ch-wook/QuickDrop), 연결된 배포 소스 브랜치는 `main`입니다.
 
-기존 Railway 서비스는 **Online**이며 공개 주소는 `dropgo.up.railway.app`입니다. 현재 작업 환경의 배포 권한이 확인되지 않아 최신 최적화본 재배포가 남았습니다. 이전 `trycloudflare.com` 주소는 일회성 개발 터널이며 운영 주소가 아닙니다.
+Railway 공개 주소는 **https://dropgo.up.railway.app**입니다. CLI의 `Unauthorized`는 남아 있지만 GitHub Source를 통한 이번 배포는 성공했습니다. 후속 푸시만으로 자동 배포가 시작되는지는 미검증입니다. 이전 `trycloudflare.com` 주소는 일회성 개발 터널이며 운영 주소가 아닙니다.
 
 ## 2. 서비스 목적
 
@@ -90,20 +90,21 @@ DataChannel 종료 이벤트가 `PEER_LEFT`보다 먼저 도착하는 경우 짧
 
 | 검사 | 결과 |
 |---|---|
-| 단위·통합 | **6개 파일, 53개 통과** |
+| 단위·통합 | **9개 파일, 83개 통과** |
 | TypeScript | 통과 |
-| production 빌드 | 프런트·서버 생성 성공 |
+| production 빌드 | 프런트·서버 생성 및 JS/CSS 사전 압축 성공 |
 | production E2E | **8개 통과**, 4개 skip |
-| 공개 HTTPS E2E | 앞선 실행에서 **1개 통과**; QR 해독, WSS, 실제 WebRTC 텍스트/파일 |
+| 공개 HTTPS E2E | **Chromium·Firefox 2개 통과**, 16.0초; QR 해독, WSS, 실제 WebRTC 텍스트·72,000-byte 파일 |
+| 공개 빌드 일치 | deploy:verify 통과; JS/CSS 해시·내용, Brotli/캐시, health/PUBLIC_URL |
 | 모바일 상태 명령 | 종료된 로컬 서버를 `stopped`로 판정함을 실제 확인 |
 | 상태 검사 회귀 | 중지, 세션 불일치, DNS 실패, 정상/잘못된 응답 |
 | 실기기/외부 TURN | 미검증 |
-| Docker 실행 | Docker CLI가 없어 미검증 |
-| 상시 배포/고정 도메인 | 미완료 |
+| 로컬 Docker Compose | Docker CLI가 없어 미실행 |
+| 상시 배포/고정 주소 | Railway 배포 성공, dropgo.up.railway.app |
 
 4개 skip 중 2개는 Windows WebKit의 WebRTC API 부재, 나머지 2개는 교차 엔진 검사의 중복 실행 제외입니다. Chromium/Firefox의 실제 전송과 Windows WebKit의 UI/오류 안내를 검증했습니다. 실제 Safari·iPhone·Android 검증을 대체하지 않습니다.
 
-공개 HTTPS 테스트 통과는 이전 주소가 현재도 살아 있다는 의미가 아닙니다. 상세 기록은 [VALIDATION.md](./VALIDATION.md)에 있습니다.
+공개 주소에서 데스크톱 QR과 390px 모바일 연결·텍스트·다운로드 화면도 확인했습니다. 이는 실제 휴대폰 카메라·OS 검증을 대체하지 않습니다. 과거 임시 터널 검사와 이번 운영 배포 검사를 구분한 기록은 [VALIDATION.md](./VALIDATION.md)에 있습니다.
 
 ## 7. 실행 방법
 
@@ -116,7 +117,7 @@ npm run dev
 
 `http://localhost:3000`에서 다른 브라우저/시크릿 창을 연결합니다.
 
-휴대폰 확인:
+서비스 사용은 두 기기에서 https://dropgo.up.railway.app 을 열어 시작합니다. 휴대폰으로 로컬 수정본을 개발 확인하려는 경우:
 
 ```sh
 npm run dev:mobile
@@ -157,11 +158,11 @@ production 및 외부 HTTPS E2E 명령은 README에 있습니다.
 
 | 순서 | 작업 | 필요한 조건 |
 |---|---|---|
-| 1 | 기존 Railway 서비스에 최적화본 재배포 | CLI 인증 또는 GitHub 자동 배포 연결 확인 |
-| 2 | 실제 iPhone/Android QR·전송·저장 | 실기기와 접근 가능한 HTTPS |
-| 3 | 서로 다른 통신망 및 TURN 확인 | TURN/단기 credential |
-| 4 | Docker 실행/healthcheck 검증 | Docker 실행 환경 |
-| 5 | 100MiB 경계·장시간·백그라운드 | 실기기 메모리/네트워크 검증 |
+| 1 | 실제 iPhone/Android QR·전송·저장 | 실기기 |
+| 2 | 서로 다른 통신망 및 TURN 확인 | 운영 TURN 서버/단기 credential |
+| 3 | 로컬 Docker Compose 실행/healthcheck 검증 | Docker 실행 환경 |
+| 4 | 100MiB 경계·장시간·백그라운드 | 실기기 메모리/네트워크 검증 |
+| 5 | 후속 푸시 자동 배포 동작 확인 | Railway 자동 배포 설정·실제 후속 배포 확인 |
 
 Remember Device, PWA, Share Target, 3대 이상 연결, Offline Drop, Push, Transfer Resume는 원래 MVP 범위 밖이며 미구현입니다.
 

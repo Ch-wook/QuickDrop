@@ -1,9 +1,13 @@
 # QuickDrop 출시 및 운영
 
-확인일: 2026-10-06. **기존 서비스는 https://dropgo.up.railway.app 에서 동작 중입니다.** 사용자가 제공한 Railway 화면의 Online 상태와 실제 HTTP/QR/WSS/WebRTC 전송을 확인했습니다. 최적화한 새 로컬 빌드는 검증됐지만, 현재 배포 도구 인증이 `Unauthorized`여서 새 버전 재배포는 아직 확인되지 않았습니다.
+확인일: 2026-10-06. **최적화본을 https://dropgo.up.railway.app 에 배포하고 검증했습니다.** GitHub의 Railway 배포 성공 상태와 공개 서버의 실제 자산 해시·내용·압축·캐시 설정을 확인했습니다. Chromium·Firefox 공개 E2E 2개가 통과했으며 QR 해독, WSS, WebRTC 텍스트 및 72,000-byte 파일의 다운로드 일치를 검증했습니다.
 
 - 프로젝트: `ab9bfe11-b642-4f84-8549-943a09c71d2e`
-- 환경: `production`, 서비스 이름: `quickdrop`
+- 환경: `production` (`8f80c170-be57-409d-ba7e-86c0fafa6681`)
+- 서비스: `quickdrop` (`ae67e523-51d8-469b-8f7e-0f1b37e53c03`)
+- 성공한 배포: `9a5e86b0-5dc8-4836-a2f3-3e01db2a4479`
+- 배포 코드: [`91aba3b8f5d5331b0917b7cd219000b0a5cb8bc6`](https://github.com/Ch-wook/QuickDrop/commit/91aba3b8f5d5331b0917b7cd219000b0a5cb8bc6)
+- 확인한 자산: `index-DlbgtMzG.js`, `index-DFBmzxZh.css`
 - 새 빌드 확인: `npm run deploy:verify -- https://dropgo.up.railway.app`
 - 개선 내용/측정: [OPTIMIZATION.md](./OPTIMIZATION.md)
 
@@ -21,13 +25,13 @@
 - 브라우저 콜백 로그인은 5분 동안 콜백을 받지 못해 timeout으로 종료했습니다.
 - 기기 코드 방식으로 재시도했고 사용자는 Railway 웹페이지의 인증 성공을 확인했습니다.
 - 그 후에도 `railway whoami --json`과 `railway list --json`은 `Unauthorized`를 반환했고, CLI 인증 설정 파일이 생성되지 않았습니다. 코드 로그인 프로세스에도 완료 결과가 도착하지 않았습니다.
-- 따라서 웹페이지의 성공 표시와 배포 도구의 실제 인증 상태가 일치하지 않는 상황입니다. 구체적인 원인은 아직 확인되지 않았으며, 사용자에게 승인이 필요하다는 사실만으로 원인을 단정하지 않습니다.
+- CLI 인증 문제의 구체적인 원인은 아직 확인되지 않았습니다. 이후 Railway 웹에서 GitHub 저장소를 연결해 배포했으며, CLI 인증 제한과 실제 서비스 배포 완료는 별개입니다.
 
-로그인 링크나 일회용 코드, 토큰은 문서/Git에 기록하지 않습니다. 로그인 완료 후 `whoami`와 프로젝트 조회가 성공하는 것을 확인한 뒤 기존 서비스를 갱신해야 합니다. 필요 시 같은 PC의 터미널에서 `npx --yes @railway/cli@5.63.3 login`을 실행하고 브라우저 승인을 완료합니다. 브라우저 접근이 어려운 환경에서는 `login --browserless`를 사용합니다. [공식 CLI 인증 안내](https://docs.railway.com/cli#authentication)
+로그인 링크나 일회용 코드, 토큰은 문서/Git에 기록하지 않습니다. 향후 CLI로 배포할 때는 `whoami`와 프로젝트 조회가 성공하는 것을 먼저 확인합니다. CLI 인증이 필요하면 같은 PC의 터미널에서 `npx --yes @railway/cli@5.63.3 login`을 실행하고 브라우저 승인을 완료합니다. 브라우저 접근이 어려운 환경에서는 `login --browserless`를 사용합니다. 현재 서비스는 GitHub 소스로 배포됐으므로 이 CLI 제한 때문에 배포가 미완료인 것은 아닙니다. [공식 CLI 인증 안내](https://docs.railway.com/cli#authentication)
 
 ## 현재 배포 구성
 
-- GitHub: `Ch-wook/QuickDrop`, 브랜치 `main`.
+- GitHub Source 연결 완료: `Ch-wook/QuickDrop`, 브랜치 `main`.
 - Dockerfile: Node 24, production build, non-root 실행.
 - railway.json: Docker builder, `/api/health`, 실패 시 재시작, replica 1개.
 - 하나의 프로세스가 프런트엔드·HTTP API·WebSocket을 함께 제공합니다.
@@ -35,7 +39,7 @@
 - 별도 DB·파일 저장소·볼륨은 필요 없습니다.
 - 정적 호스팅만으로는 `/api/rooms`와 `/ws`가 실행되지 않습니다.
 
-## 배포 순서
+## 후속 배포 순서
 
 1. 연결된 Railway 계정에서 사용 가능한 프로젝트/플랜과 비용 조건을 확인합니다. 유료 플랜 구매·전환은 별도 비용 확인 후 진행합니다.
 2. 기존 `quickdrop` 서비스를 재사용합니다. GitHub `Ch-wook/QuickDrop`의 `main` 소스 연결 여부를 확인하고 저장소 루트의 Dockerfile과 railway.json을 사용합니다. 이미 존재하는 프로젝트를 다시 생성하지 않습니다.
@@ -50,7 +54,7 @@ CLI 인증이 완료되면 프로젝트 루트에서 기존 서비스에 업로�
 npx --yes @railway/cli@5.63.3 up --project ab9bfe11-b642-4f84-8549-943a09c71d2e --service quickdrop --environment production --detach
 ```
 
-GitHub 자동 배포를 사용하는 경우 서비스 Source에 올바른 저장소/브랜치가 연결되어야 합니다. 단순 Redeploy는 이전 소스의 재배포일 수 있으므로, 반드시 새 커밋으로 빌드됐는지와 `deploy:verify` 결과를 확인합니다.
+GitHub Source는 연결됐고 이번 배포는 성공했습니다. 제공된 Railway 화면에는 자동 배포 사용 불가 표시가 있었으므로, 향후 `main` 푸시만으로 자동 배포가 시작되는지는 아직 확인하지 않았습니다. 필요하면 Railway에서 해당 커밋의 배포를 실행합니다. 단순 Redeploy는 이전 소스의 재배포일 수 있으므로, 반드시 새 커밋으로 빌드됐는지와 `deploy:verify` 결과를 확인합니다.
 
 | 변수 | 운영 설정 |
 |---|---|
@@ -67,7 +71,7 @@ GitHub 자동 배포를 사용하는 경우 서비스 Source에 올바른 저장
 
 ## 서로 다른 통신망: TURN
 
-STUN만으로 연결되지 않는 NAT/방화벽이 있으므로 광범위한 공개 출시에는 운영 TURN 서버와 실망 검증이 필요합니다. TURN 서버 자체는 이 저장소/현재 배포에서 생성되지 않았습니다.
+STUN만으로 연결되지 않는 NAT/방화벽이 있으므로 광범위한 공개 출시에는 운영 TURN 서버와 실제 통신망 검증이 필요합니다. TURN 서버 자체는 이 저장소/현재 배포에서 생성되지 않았습니다.
 
 coturn REST 인증을 지원하는 서버에는 다음을 설정합니다.
 
@@ -99,7 +103,7 @@ npm audit
 ```powershell
 npm run deploy:verify -- https://dropgo.up.railway.app
 $env:E2E_BASE_URL = 'https://dropgo.up.railway.app'
-npm run test:e2e -- --project=chromium
+npm run test:e2e -- --project=chromium --project=firefox
 Remove-Item Env:E2E_BASE_URL
 ```
 
@@ -122,10 +126,13 @@ Remove-Item Env:E2E_BASE_URL
 | TypeScript + 운영 빌드 | 통과 |
 | 운영 빌드 브라우저 E2E | 8개 통과, 4개 skip |
 | 의존성 audit | 알려진 취약점 0개 |
-| Railway 배포 권한 | 사용자 웹 인증 성공 확인, CLI는 여전히 Unauthorized |
-| 기존 원격 서비스/HTTPS 주소 | dropgo.up.railway.app 정상 응답 |
-| 기존 공개 서버 E2E | 1개 통과 |
-| 최적화본 원격 반영 | 미확인, 공개 HTML은 아직 이전 빌드 |
+| Railway 배포 | GitHub Source 연결 후 성공, 배포 코드 91aba3b |
+| Railway CLI 인증 | Unauthorized 유지; 완료된 GitHub 소스 배포와 별개 |
+| 후속 푸시 자동 배포 | 미검증, 제공 화면에 자동 배포 사용 불가 표시 |
+| 공개 서비스/HTTPS 주소 | dropgo.up.railway.app 정상 응답 |
+| 최적화본 공개 E2E | Chromium·Firefox 2개 통과, 16.0초 |
+| 최적화본 원격 반영 | deploy:verify 통과; 로컬 JS/CSS 해시·내용, Brotli/캐시, health/PUBLIC_URL 일치 |
+| 화면 확인 | 데스크톱 QR, 390px 모바일 연결·텍스트·다운로드 화면 확인 |
 | 실기기 / 운영 TURN | 미실행 |
 
-배포 권한이 확인되면 위 순서로 기존 서비스를 갱신하고 최종 검증을 이어갑니다.
+이번 최적화본 배포와 공개 브라우저 검증은 완료했습니다. 실제 iPhone/Android, 통신망 간 연결, 운영 TURN, 100MiB 경계 및 장시간 전송 검증은 후속 작업입니다.

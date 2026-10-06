@@ -148,7 +148,7 @@ WS 메시지: `JOIN`, `JOINED`, `PEER_JOINED`, `OFFER`, `ANSWER`, `ICE_CANDIDATE
 
 ## 6. 파일 전송 구성
 
-- 파일 chunk payload는 16KiB이며 한 번에 전체 파일을 `send()`하지 않습니다.
+- 파일은 최대 256KiB씩 읽고 16KiB payload 청크로 나눕니다. 한 번에 전체 파일을 `send()`하지 않습니다.
 - 바이너리 프레임: UUID ASCII 36 bytes + sequence uint32 4 bytes + payload.
 - 송신 버퍼가 1MiB를 초과하면 backpressure에 따라 기다립니다.
 - 수신자는 transfer ID, 순서, 총 크기를 확인하고 Blob을 만듭니다.
@@ -205,7 +205,7 @@ npm start
 docker compose up --build -d
 ```
 
-Railway에는 GitHub 저장소를 연결하고 `railway.json` + `Dockerfile`로 배포하도록 준비했습니다. 기본 제공 HTTPS 도메인을 사용하며 `PUBLIC_URL`에 실제 발급 주소, `TRUST_PROXY=1`, `HOST=0.0.0.0`을 설정합니다. 앱의 Room은 메모리 상태이므로 **replica는 1개**로 유지합니다. 호스팅 계정 연결/실제 도메인 발급/배포 확인이 끝나야 상시 서비스입니다. 임시 터널을 상시 배포 완료로 간주하지 않습니다.
+Railway의 `quickdrop` 서비스에 GitHub `Ch-wook/QuickDrop`의 `main` 소스를 연결했습니다. `railway.json` + `Dockerfile`로 코드 `91aba3b`를 배포했으며 **https://dropgo.up.railway.app** 에서 최신 JS/CSS·압축·캐시 일치와 공개 QR/전송을 검증했습니다. `/api/config`의 `PUBLIC_URL`도 같은 HTTPS origin입니다. 운영 설정은 `TRUST_PROXY=1`, `HOST=0.0.0.0`을 기준으로 하며 Room이 메모리 상태이므로 **replica는 1개**로 유지합니다. CLI 인증 제한과 후속 푸시 자동 배포의 미검증 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 기록합니다.
 
 ## 9. 주요 환경 변수
 
@@ -218,13 +218,14 @@ Railway에는 GitHub 저장소를 연결하고 `railway.json` + `Dockerfile`로 
 | `MAX_SESSION_BYTES` | 209715200 bytes |
 | `STUN_URL` | 기본 Google STUN; 빈 값이면 비활성 |
 | `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD` | 선택적인 TURN 연결 설정 |
+| `TURN_SECRET`, `TURN_CREDENTIAL_TTL` | coturn REST 임시 인증용 비밀키와 유효 시간; TTL 기본 3600초 |
 | `TRUST_PROXY` | 기본 0; 정확한 reverse proxy hop 수 |
 | `JOIN_RATE_LIMIT` | IP당 분당 10회 |
 | `MOBILE_PORT` | `dev:mobile` 전용 포트, 기본 3001 |
 | `E2E_PRODUCTION` | 테스트 서버를 production 모드로 실행 |
 | `E2E_BASE_URL` | 지정한 실제 HTTPS 배포 주소에 mobile E2E 실행 |
 
-`/api/config`의 TURN credential은 브라우저에 제공됩니다. 공개 운영에는 장기 공용 비밀번호 대신 단기 credential 발급을 적용해야 합니다.
+`/api/config`의 TURN credential은 브라우저에 제공됩니다. `TURN_SECRET`을 설정하면 만료되는 인증정보를 발급하며 서버 비밀키는 응답에 포함하지 않습니다. 현재 공개 서버에는 STUN 1개만 설정되어 있으며 운영 TURN 연결과 검증은 남아 있습니다.
 
 ## 10. 테스트와 배포 확인
 
@@ -239,8 +240,9 @@ npm run test:e2e
 공개 HTTPS 테스트(PowerShell):
 
 ```powershell
-$env:E2E_BASE_URL = 'https://실제-배포-주소'
-npm run test:e2e -- --project=chromium
+npm run deploy:verify -- https://dropgo.up.railway.app
+$env:E2E_BASE_URL = 'https://dropgo.up.railway.app'
+npm run test:e2e -- --project=chromium --project=firefox
 Remove-Item Env:E2E_BASE_URL
 ```
 
@@ -255,7 +257,7 @@ Remove-Item Env:E2E_BASE_URL
 - 서버 재시작, 새로고침, 새 연결 시 복구하지 않습니다.
 - 모바일 백그라운드나 NAT/방화벽 환경에서는 전송 실패 가능성이 있습니다.
 - 계정·기기 기억·PWA·3대 이상·오프라인 보관·push·전송 resume는 미구현입니다.
-- 향후 우선순위는 실제 iPhone/Android/통신망 QA, TURN 단기 credential, 대용량 스트리밍/전송 재개입니다.
+- 향후 우선순위는 실제 iPhone/Android/통신망 QA, 운영 TURN 연결과 인증 만료 검증, 대용량 스트리밍/전송 재개입니다.
 
 ## 12. 참고
 

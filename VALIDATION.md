@@ -1,22 +1,27 @@
 # QuickDrop 검증 기록
 
-## 2026-10-06 최적화 후 검증
+## 2026-10-06 최적화 및 운영 배포 검증
 
 - `npm test`: **9개 파일, 83개 통과**.
 - `npm run build`: TypeScript 및 JS/CSS 사전 압축을 포함한 운영 빌드 통과.
 - 새 로컬 production E2E: **8개 통과, 4개 skip**.
-- 기존 운영 주소 `https://dropgo.up.railway.app`의 공개 HTTPS E2E: **1개 통과**, 실제 QR/WSS/WebRTC/파일 바이트 검증. 기존 빌드에 대한 검사입니다.
+- 배포된 최적화본 `https://dropgo.up.railway.app`의 공개 HTTPS E2E: **Chromium·Firefox 2개 통과, 16.0초**. 실제 QR 해독, WSS, WebRTC 텍스트 및 72,000-byte 파일의 다운로드 일치를 검증했습니다.
 - `npm audit --json`: `source-map-js` 1.2.2 갱신 후 알려진 취약점 **0개**.
-- `npm run deploy:verify -- https://dropgo.up.railway.app`: 아직 이전 빌드라고 정상적으로 탐지하고 코드 1로 종료. 최적화본 재배포는 미확인.
+- `npm run deploy:verify -- https://dropgo.up.railway.app`: **통과**. 로컬 JS/CSS의 해시·내용, Brotli/캐시 설정, healthcheck와 PUBLIC_URL을 확인했습니다. 이전 빌드일 때 코드 1로 종료했던 검사는 배포 전 기록이며, 배포 후 새 검사가 성공했습니다.
+- 배포 코드: `91aba3b8f5d5331b0917b7cd219000b0a5cb8bc6`. Railway 배포 ID: `9a5e86b0-5dc8-4836-a2f3-3e01db2a4479`. GitHub의 Railway 배포 성공 상태도 확인했습니다.
+- 공개 자산: `index-DlbgtMzG.js`, `index-DFBmzxZh.css`.
+- 공개 화면: 데스크톱 QR과 390px 모바일 연결·텍스트·다운로드 화면을 확인했고 눈에 띄는 가로 넘침은 없었습니다. 실제 스마트폰 검증은 아닙니다.
+- GitHub Source의 `main` 연결과 이번 배포는 확인했습니다. CLI는 여전히 `Unauthorized`이며 후속 푸시 자동 배포는 미검증입니다.
+- 실제 iPhone/Android, 운영 TURN, 통신망 간 연결 및 100MiB 경계·장시간 전송은 미검증입니다.
 - [상세 개선·측정 기록](./OPTIMIZATION.md).
 
-## 2026-10-06 출시 준비 재검증
+## 2026-10-06 출시 준비 재검증 (위 배포 이전 기록)
 
 - `npm test`: 7개 파일, **58개 통과**. TURN 임시 인증의 만료 timestamp·coturn 서명·요청별 독립성과 비밀키 비노출, 설정 API 캐시 금지·rate limit 포함.
 - `npm run build`: TypeScript 검사 및 production 프런트/서버 빌드 통과.
 - production E2E: **8개 통과, 4개 skip**, 실패 없음. skip은 중복 교차 엔진 검사 2개와 Windows WebKit의 WebRTC 미지원 검사 2개.
 - `npm audit --json`: 알려진 취약점 **0개**.
-- 원격 배포 및 공개 주소 E2E는 Railway 계정 연결이 없어 미실행. 운영 TURN 서버·실제 iPhone/Android·Docker 실행은 여전히 미검증.
+- 당시 원격 배포 및 공개 주소 E2E는 Railway 계정 연결이 없어 미실행이었습니다. 이후 운영 배포 검증 결과는 위에 기록했습니다. 운영 TURN 서버·실제 iPhone/Android·로컬 Docker Compose 실행은 미검증입니다.
 - 상세 배포 상태: [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 아래는 2026-09-23 당시의 검사 기록입니다.
@@ -98,7 +103,7 @@ QR은 렌더링된 PNG를 독립 decoder(jsQR)로 해독하여 실제 `/join/{ro
 - 임시 터널은 이전 공개 HTTPS 검사 후 DNS `ENOTFOUND`가 관찰됐습니다. 이 상태를 숨기지 않도록 로컬 세션 확인과 공개 healthcheck를 분리한 상태 검사 명령을 추가했습니다.
 - 상태 검사 6개 사례와 URL 4개 사례, 파일 큐 1개 사례를 추가하여 총 53개 테스트가 통과했습니다.
 - 수정본의 production 빌드와 전체 E2E를 재실행하여 8개 통과, 4개 skip을 확인했습니다.
-- 상시 배포 및 고정 도메인은 아직 완료하지 않았습니다.
+- 2026-09-23 당시 상시 배포 및 고정 도메인은 미완료였습니다. 이후 2026-10-06 Railway 운영 주소 배포와 검증을 완료했습니다.
 
 ### 외부 환경에서 필요한 확인
 
