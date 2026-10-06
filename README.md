@@ -4,6 +4,8 @@
 
 앱 설치, 계정, 로그인 없이 두 브라우저 사이에서 텍스트·링크·이미지·파일을 양방향 전송하는 MVP입니다. PC, 휴대폰, 태블릿은 모두 동등한 Peer입니다. 자료를 자기 기기로 옮기기 위해 메신저나 클라우드에 업로드할 필요가 없습니다.
 
+**전체 프로젝트 정리:** [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md). 서비스 기능, 기술·폴더 구성, 200MiB 제한, 최적화, 운영·검색 설정, 검증 결과와 남은 작업을 한 문서에서 볼 수 있습니다. 2026-10-07 운영 서버와 실제 제한값을 다시 확인했습니다.
+
 ## 실행
 
 전체 프로젝트 요약은 [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md), 구현 현황과 남은 작업은 [PROJECT_STATUS.md](./PROJECT_STATUS.md), 파일·API 구성은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), 검사 결과는 [VALIDATION.md](./VALIDATION.md)를 참고하세요.

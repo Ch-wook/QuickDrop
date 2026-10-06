@@ -1,5 +1,13 @@
 # QuickDrop 검증 기록
 
+## 2026-10-07 운영 상태 재확인
+
+- 공개 주소 `https://dropgo.up.railway.app/api/health`: `ok: true`.
+- `/api/config`: `publicUrl`이 운영 HTTPS origin과 일치.
+- 실제 파일당 제한 `maxFileSize`: **209,715,200바이트(200MiB)**.
+- 실제 수신 합계 제한 `maxSessionBytes`: **209,715,200바이트(200MiB)**.
+- 이번 변경은 프로젝트 문서 정리입니다. 코드 변경 없이 아래 2026-10-06 테스트 기록을 유지했습니다.
+
 ## 2026-10-06 파일당 200MiB 및 검색 접근 변경
 
 - 기능 변경 코드 `7272183`, Railway 배포 `26dfe327-635a-45fe-8dce-17b2837f2f0a`.
