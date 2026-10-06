@@ -1,5 +1,15 @@
 # QuickDrop 검증 기록
 
+## 2026-10-06 최적화 후 검증
+
+- `npm test`: **9개 파일, 83개 통과**.
+- `npm run build`: TypeScript 및 JS/CSS 사전 압축을 포함한 운영 빌드 통과.
+- 새 로컬 production E2E: **8개 통과, 4개 skip**.
+- 기존 운영 주소 `https://dropgo.up.railway.app`의 공개 HTTPS E2E: **1개 통과**, 실제 QR/WSS/WebRTC/파일 바이트 검증. 기존 빌드에 대한 검사입니다.
+- `npm audit --json`: `source-map-js` 1.2.2 갱신 후 알려진 취약점 **0개**.
+- `npm run deploy:verify -- https://dropgo.up.railway.app`: 아직 이전 빌드라고 정상적으로 탐지하고 코드 1로 종료. 최적화본 재배포는 미확인.
+- [상세 개선·측정 기록](./OPTIMIZATION.md).
+
 ## 2026-10-06 출시 준비 재검증
 
 - `npm test`: 7개 파일, **58개 통과**. TURN 임시 인증의 만료 timestamp·coturn 서명·요청별 독립성과 비밀키 비노출, 설정 API 캐시 금지·rate limit 포함.

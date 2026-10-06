@@ -1,14 +1,19 @@
 # QuickDrop 출시 및 운영
 
-확인일: 2026-10-06. **상시 배포 및 고정 도메인은 아직 발급되지 않았습니다.** 사용자는 Railway 인증 성공을 확인했지만, 배포 도구에서는 아직 인증이 완료되지 않아 원격 서비스 생성·배포를 실행하지 못했습니다. 아래 주소 후보는 예약되거나 사용 가능하다고 확인된 주소가 아닙니다.
+확인일: 2026-10-06. **기존 서비스는 https://dropgo.up.railway.app 에서 동작 중입니다.** 사용자가 제공한 Railway 화면의 Online 상태와 실제 HTTP/QR/WSS/WebRTC 전송을 확인했습니다. 최적화한 새 로컬 빌드는 검증됐지만, 현재 배포 도구 인증이 `Unauthorized`여서 새 버전 재배포는 아직 확인되지 않았습니다.
+
+- 프로젝트: `ab9bfe11-b642-4f84-8549-943a09c71d2e`
+- 환경: `production`, 서비스 이름: `quickdrop`
+- 새 빌드 확인: `npm run deploy:verify -- https://dropgo.up.railway.app`
+- 개선 내용/측정: [OPTIMIZATION.md](./OPTIMIZATION.md)
 
 ## 주소 결정
 
 `.qd`는 [IANA 공식 최상위 도메인 목록](https://data.iana.org/TLD/tlds-alpha-by-domain.txt)에 없습니다. 일반 도메인 등록으로 `서비스.qd`를 만들 수 없습니다.
 
-별도 도메인 구매 없이 Railway 기본 HTTPS 도메인을 먼저 사용합니다. `qd`, `qdrop`, `quickdrop` 순서로 짧은 이름의 사용 가능 여부를 확인하고, 실제 발급 성공한 주소를 `PUBLIC_URL`로 확정합니다. 기본 도메인 형식은 `이름.up.railway.app`입니다. [Railway 도메인 문서](https://docs.railway.com/networking/domains/working-with-domains)
+현재 발급된 기본 도메인 `dropgo.up.railway.app`을 사용합니다. `/api/config`의 `PUBLIC_URL`도 같은 HTTPS origin으로 확인됐습니다. 기본 도메인 형식은 `이름.up.railway.app`입니다. [Railway 도메인 문서](https://docs.railway.com/networking/domains/working-with-domains)
 
-사용자는 이후 `qd.up.railway.app` 대신 `railway.app`을 요청했습니다. `railway.app` 자체는 제공자의 도메인이므로 이 프로젝트에 할당할 수 없습니다. 사용자에게 공개할 최종 짧은 주소는 아직 확정되지 않았으며, `up.railway.app` 접미사를 없애려면 사용자가 소유한 별도 도메인을 연결해야 합니다. 도메인 구매는 실행하지 않았습니다.
+`railway.app` 자체는 제공자의 도메인이므로 이 프로젝트에 할당할 수 없습니다. `up.railway.app` 접미사를 없애려면 사용자가 소유한 별도 도메인을 연결해야 합니다. 도메인 구매는 실행하지 않았습니다.
 
 ## 계정 인증 확인 기록
 
@@ -18,7 +23,7 @@
 - 그 후에도 `railway whoami --json`과 `railway list --json`은 `Unauthorized`를 반환했고, CLI 인증 설정 파일이 생성되지 않았습니다. 코드 로그인 프로세스에도 완료 결과가 도착하지 않았습니다.
 - 따라서 웹페이지의 성공 표시와 배포 도구의 실제 인증 상태가 일치하지 않는 상황입니다. 구체적인 원인은 아직 확인되지 않았으며, 사용자에게 승인이 필요하다는 사실만으로 원인을 단정하지 않습니다.
 
-로그인 링크나 일회용 코드, 토큰은 문서/Git에 기록하지 않습니다. 로그인 완료 후 `whoami`와 프로젝트 목록 조회가 성공하는 것을 확인한 뒤 서비스를 생성해야 합니다. 필요 시 같은 PC의 터미널에서 `npx --yes @railway/cli@5.63.3 login`을 실행하고 브라우저 승인을 완료합니다. 브라우저 접근이 어려운 환경에서는 `login --browserless`를 사용합니다. [공식 CLI 인증 안내](https://docs.railway.com/cli#authentication)
+로그인 링크나 일회용 코드, 토큰은 문서/Git에 기록하지 않습니다. 로그인 완료 후 `whoami`와 프로젝트 조회가 성공하는 것을 확인한 뒤 기존 서비스를 갱신해야 합니다. 필요 시 같은 PC의 터미널에서 `npx --yes @railway/cli@5.63.3 login`을 실행하고 브라우저 승인을 완료합니다. 브라우저 접근이 어려운 환경에서는 `login --browserless`를 사용합니다. [공식 CLI 인증 안내](https://docs.railway.com/cli#authentication)
 
 ## 현재 배포 구성
 
@@ -33,11 +38,19 @@
 ## 배포 순서
 
 1. 연결된 Railway 계정에서 사용 가능한 프로젝트/플랜과 비용 조건을 확인합니다. 유료 플랜 구매·전환은 별도 비용 확인 후 진행합니다.
-2. GitHub `main`을 소스로 서비스를 생성하고 저장소 루트의 Dockerfile과 railway.json을 사용합니다.
+2. 기존 `quickdrop` 서비스를 재사용합니다. GitHub `Ch-wook/QuickDrop`의 `main` 소스 연결 여부를 확인하고 저장소 루트의 Dockerfile과 railway.json을 사용합니다. 이미 존재하는 프로젝트를 다시 생성하지 않습니다.
 3. 아래 환경 변수를 설정합니다. 플랫폼이 제공하는 `PORT`를 사용하고 공개 도메인의 target port를 서버와 맞춥니다.
-4. 서비스 HTTPS 도메인을 발급하고 `PUBLIC_URL`에 확정 주소를 설정하여 재배포합니다.
+4. 기존 `dropgo.up.railway.app` 도메인과 `PUBLIC_URL`을 유지하여 재배포합니다.
 5. healthcheck, 홈페이지, QR, WSS, 실제 전송을 확인합니다.
 6. 성공한 URL·배포 ID·Git commit·검증일을 이 문서에 기록한 뒤 출시 완료로 표시합니다.
+
+CLI 인증이 완료되면 프로젝트 루트에서 기존 서비스에 업로드할 수 있습니다:
+
+```powershell
+npx --yes @railway/cli@5.63.3 up --project ab9bfe11-b642-4f84-8549-943a09c71d2e --service quickdrop --environment production --detach
+```
+
+GitHub 자동 배포를 사용하는 경우 서비스 Source에 올바른 저장소/브랜치가 연결되어야 합니다. 단순 Redeploy는 이전 소스의 재배포일 수 있으므로, 반드시 새 커밋으로 빌드됐는지와 `deploy:verify` 결과를 확인합니다.
 
 | 변수 | 운영 설정 |
 |---|---|
@@ -65,7 +78,7 @@ coturn REST 인증을 지원하는 서버에는 다음을 설정합니다.
 
 `/api/config`는 요청마다 만료 timestamp와 무작위 ID가 포함된 username 및 HMAC-SHA1 인증정보를 생성합니다. `TURN_SECRET`은 응답에 포함하지 않습니다. 응답은 `no-store`이며 IP당 분당 120회로 제한합니다. 고정 `TURN_USERNAME`/`TURN_PASSWORD`는 제한된 테스트 계정 호환용이며 `TURN_SECRET`이 있으면 임시 인증이 우선합니다. [coturn 인증 규격](https://github.com/coturn/coturn/wiki/turnserver#turn-rest-api)
 
-임시 인증정보도 유효 시간 동안은 브라우저에서 확인할 수 있습니다. 익명 발급이므로 TURN 제공자의 할당량·전송량 제한과 사용량 알림도 설정해야 합니다. 인증정보 자동 갱신은 현재 구현하지 않았으므로 장시간 열린 페이지에서 신규 연결이 실패하면 페이지를 새로 열어 인증정보를 재발급받습니다. 운영 서버에서는 인증 만료 전후와 긴 전송을 추가 검증해야 합니다.
+임시 인증정보도 유효 시간 동안은 브라우저에서 확인할 수 있습니다. 익명 발급이므로 TURN 제공자의 할당량·전송량 제한과 사용량 알림도 설정해야 합니다. 최적화본은 TURN이 설정된 새 Peer 협상마다 인증정보를 갱신합니다. 연결 도중의 주기적 갱신/ICE restart는 아직 구현하지 않았으므로 운영 서버에서는 인증 만료 전후와 긴 전송을 추가 검증해야 합니다. 현재 공개 설정에는 STUN 1개만 확인되며 운영 TURN 서버 연결은 별도 필요합니다.
 
 ## 출시 검증
 
@@ -84,7 +97,8 @@ npm audit
 실제 발급된 HTTPS 주소 검증:
 
 ```powershell
-$env:E2E_BASE_URL = 'https://실제발급된주소'
+npm run deploy:verify -- https://dropgo.up.railway.app
+$env:E2E_BASE_URL = 'https://dropgo.up.railway.app'
 npm run test:e2e -- --project=chromium
 Remove-Item Env:E2E_BASE_URL
 ```
@@ -104,12 +118,14 @@ Remove-Item Env:E2E_BASE_URL
 
 | 항목 | 상태 |
 |---|---|
-| 단위·통합 검사 | 7개 파일, 58개 통과 |
+| 단위·통합 검사 | 9개 파일, 83개 통과 |
 | TypeScript + 운영 빌드 | 통과 |
 | 운영 빌드 브라우저 E2E | 8개 통과, 4개 skip |
 | 의존성 audit | 알려진 취약점 0개 |
 | Railway 배포 권한 | 사용자 웹 인증 성공 확인, CLI는 여전히 Unauthorized |
-| 원격 서비스/고정 HTTPS 주소 | 미생성 |
-| 공개 배포 주소 E2E / 실기기 / TURN | 미실행 |
+| 기존 원격 서비스/HTTPS 주소 | dropgo.up.railway.app 정상 응답 |
+| 기존 공개 서버 E2E | 1개 통과 |
+| 최적화본 원격 반영 | 미확인, 공개 HTML은 아직 이전 빌드 |
+| 실기기 / 운영 TURN | 미실행 |
 
-배포 계정 인증이 완료되면 위 순서로 원격 배포와 최종 검증을 이어갑니다.
+배포 권한이 확인되면 위 순서로 기존 서비스를 갱신하고 최종 검증을 이어갑니다.

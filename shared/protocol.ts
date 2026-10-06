@@ -68,17 +68,19 @@ export type Transfer = {
 export type PublicConfig = { publicUrl: string; maxFileSize: number; maxSessionBytes: number; iceServers: RTCIceServer[] };
 
 // FILE_CHUNK: 36 ASCII UUID bytes + uint32 big-endian sequence + payload.
-export function encodeChunk(id: string, sequence: number, bytes: ArrayBuffer): ArrayBuffer {
-  if (!TRANSFER_ID.test(id) || bytes.byteLength > CHUNK_SIZE) throw new Error('Invalid chunk');
+const chunkEncoder = new TextEncoder();
+const chunkDecoder = new TextDecoder();
+export function encodeChunk(id: string, sequence: number, bytes: ArrayBuffer | Uint8Array): ArrayBuffer {
+  if (!TRANSFER_ID.test(id) || !Number.isInteger(sequence) || sequence < 0 || sequence > 0xffffffff || bytes.byteLength === 0 || bytes.byteLength > CHUNK_SIZE) throw new Error('Invalid chunk');
   const packet = new ArrayBuffer(40 + bytes.byteLength);
-  new Uint8Array(packet).set(new TextEncoder().encode(id));
+  new Uint8Array(packet).set(chunkEncoder.encode(id));
   new DataView(packet).setUint32(36, sequence);
-  new Uint8Array(packet, 40).set(new Uint8Array(bytes));
+  new Uint8Array(packet, 40).set(bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes);
   return packet;
 }
 export function decodeChunk(packet: ArrayBuffer) {
   if (packet.byteLength <= 40 || packet.byteLength > CHUNK_SIZE + 40) throw new Error('Invalid chunk size');
-  const id = new TextDecoder().decode(packet.slice(0, 36));
+  const id = chunkDecoder.decode(new Uint8Array(packet, 0, 36));
   if (!TRANSFER_ID.test(id)) throw new Error('Invalid transfer ID');
   return { id, sequence: new DataView(packet).getUint32(36), bytes: packet.slice(40) };
 }

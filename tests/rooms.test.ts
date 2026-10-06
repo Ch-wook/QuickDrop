@@ -43,3 +43,20 @@ it('limits guessing per IP and resets after the time window', () => {
   expect(limiter.allow('a')).toBe(true); expect(limiter.allow('a')).toBe(true); expect(limiter.allow('a')).toBe(false);
   expect(limiter.allow('b')).toBe(true); now = 1000; expect(limiter.allow('a')).toBe(true);
 });
+it('expires windows in order without refreshing busy entries', () => {
+  let now = 0; const limiter = new RateLimiter(2, 1000, () => now);
+  expect(limiter.allow('a')).toBe(true);
+  now = 500; expect(limiter.allow('b')).toBe(true); expect(limiter.allow('a')).toBe(true);
+  now = 1000; expect(limiter.allow('a')).toBe(true); // Reinsert behind b.
+  now = 1500; expect(limiter.allow('b')).toBe(true);
+  expect(limiter.allow('a')).toBe(true); expect(limiter.allow('a')).toBe(false);
+  now = 2000; expect(limiter.allow('a')).toBe(true);
+});
+it('reclaims capacity at expiry while preserving active limits', () => {
+  let now = 0; const limiter = new RateLimiter(1, 1000, () => now);
+  for (let i = 0; i < 20000; i++) expect(limiter.allow(String(i))).toBe(true);
+  expect(limiter.allow('overflow')).toBe(false);
+  now = 1000; expect(limiter.allow('overflow')).toBe(true);
+  expect(limiter.allow('overflow')).toBe(false);
+  expect(limiter.allow('0')).toBe(true);
+});

@@ -5,6 +5,7 @@ import {
 
 const HIGH_WATER = 1024 * 1024;
 const LOW_WATER = 256 * 1024;
+const READ_SIZE = CHUNK_SIZE * 16;
 const TIMEOUT = 60000;
 
 export class Transfers {
@@ -25,7 +26,10 @@ export class Transfers {
     channel.onmessage = event => {
       this.receiveChain = this.receiveChain.then(async () => {
         if (this.disposed) return;
-        try { this.receive(event.data instanceof Blob ? await event.data.arrayBuffer() : event.data); }
+        try {
+          const data = event.data instanceof Blob ? await event.data.arrayBuffer() : event.data;
+          if (!this.disposed) this.receive(data);
+        }
         catch (error) {
           this.error(error instanceof Error ? error.message : '잘못된 전송 데이터입니다.');
           this.disconnect();
@@ -89,7 +93,7 @@ export class Transfers {
     const start = Date.now();
     while (this.channel.bufferedAmount > HIGH_WATER) {
       if (this.disposed || this.channel.readyState !== 'open') throw new Error('연결이 끊겼습니다.');
-      if (!isActive(this.records.get(id)!.status)) return;
+      if (this.records.get(id)?.status !== 'sending') return;
       if (Date.now() - start > TIMEOUT) throw new Error('파일 전송 대기 시간이 초과되었습니다.');
       await new Promise<void>(resolve => {
         const done = () => { clearTimeout(timer); this.channel.removeEventListener('bufferedamountlow', done); resolve(); };
@@ -109,13 +113,18 @@ export class Transfers {
         try {
           this.send({ type: 'FILE_START', id, name: safeFilename(file.name), size: file.size, mime: file.type.slice(0, 128) });
           let sequence = 0;
-          for (let offset = 0; offset < file.size && active(); offset += CHUNK_SIZE) {
+          // Read bounded windows to avoid a separate disk read for every wire chunk.
+          for (let offset = 0; offset < file.size && active(); offset += READ_SIZE) {
             await this.waitForBuffer(id);
             if (!active()) break;
-            const bytes = await file.slice(offset, offset + CHUNK_SIZE).arrayBuffer();
-            if (!active()) break;
-            this.channel.send(encodeChunk(id, sequence++, bytes));
-            this.update(id, { bytes: offset + bytes.byteLength }, false);
+            const window = await file.slice(offset, offset + READ_SIZE).arrayBuffer();
+            for (let position = 0; position < window.byteLength && active(); position += CHUNK_SIZE) {
+              await this.waitForBuffer(id);
+              if (!active()) break;
+              const bytes = new Uint8Array(window, position, Math.min(CHUNK_SIZE, window.byteLength - position));
+              this.channel.send(encodeChunk(id, sequence++, bytes));
+              this.update(id, { bytes: offset + position + bytes.byteLength }, false);
+            }
           }
           if (active()) {
             this.send({ type: 'FILE_END', id });
@@ -158,11 +167,18 @@ export class Transfers {
     if (typeof data !== 'string' || data.length > 50000) throw new Error('잘못된 전송 데이터입니다.');
     const message = transferSchema.parse(JSON.parse(data));
     const { id } = message;
+    if (message.type === 'TEXT' || message.type === 'LINK' || message.type === 'FILE_START') {
+      if (this.records.has(id)) throw new Error('중복 전송 ID입니다.');
+      if (this.records.size >= MAX_HISTORY) {
+        this.error('전송 기록이 가득 찼습니다. 기록을 비우고 다시 시도하세요.');
+        this.send({ type: 'TRANSFER_ERROR', id, message: '상대 기기의 전송 기록이 가득 찼습니다. 상대 기기에서 기록을 비운 뒤 다시 보내세요.' });
+        return;
+      }
+    }
     if (message.type === 'TEXT' || message.type === 'LINK') {
       this.add({ id, kind: message.type === 'LINK' ? 'link' : 'text', text: message.text, direction: 'received', time: Date.now(), status: 'complete', bytes: 0 });
       this.send({ type: 'TRANSFER_COMPLETE', id });
     } else if (message.type === 'FILE_START') {
-      if (this.records.has(id)) throw new Error('중복 전송 ID입니다.');
       this.add({ id, kind: 'file', name: safeFilename(message.name), size: message.size, mime: message.mime, direction: 'received', time: Date.now(), status: 'receiving', bytes: 0 });
       if (message.size > this.config.maxFileSize || this.retainedBytes + message.size > this.config.maxSessionBytes || this.incoming.size >= 2) {
         const error = '수신 용량 제한입니다. 기록을 비우거나 더 작은 파일을 보내세요.';

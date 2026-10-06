@@ -62,12 +62,17 @@ export function createApp(config: Config) {
     ws.send(JSON.stringify(message));
   };
   server.on('upgrade', (req, socket, head) => {
-    if (req.url !== '/ws') return; // Vite handles its own HMR upgrade in development.
+    if (req.url !== '/ws') {
+      // Development Vite owns its HMR upgrade. Production must not leave an
+      // unhandled upgraded socket alive outside both HTTP and WS tracking.
+      if (process.env.NODE_ENV === 'production') socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n', () => socket.destroy());
+      return;
+    }
     // Express derives req.ip using exactly the configured trusted proxy hop count.
     Object.setPrototypeOf(req, app.request);
     const ip = (req as express.Request).ip || req.socket.remoteAddress || 'unknown';
     if (!originAllowed(req.headers.origin, req.headers.host) || !connectLimit.allow(ip) || peers.size >= 20000) {
-      socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return;
+      socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n', () => socket.destroy()); return;
     }
     wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, ip));
   });
@@ -129,13 +134,20 @@ export function createApp(config: Config) {
     }
   }, 15000);
   sweepTimer.unref(); heartbeat.unref();
+  let closing: Promise<void> | undefined;
   return {
     app, server, rooms,
-    close: async () => {
+    close: () => {
+      if (closing) return closing;
       clearInterval(sweepTimer); clearInterval(heartbeat);
       for (const peer of peers.values()) peer.ws.terminate();
       wss.close();
-      await new Promise<void>(resolve => server.close(() => resolve()));
+      closing = new Promise<void>(resolve => {
+        const deadline = setTimeout(() => server.closeAllConnections(), 5000);
+        deadline.unref();
+        server.close(() => { clearTimeout(deadline); resolve(); });
+      });
+      return closing;
     },
   };
 }

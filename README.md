@@ -8,7 +8,7 @@
 
 지금까지의 구현 현황과 남은 작업은 [PROJECT_STATUS.md](./PROJECT_STATUS.md), 전체 구성은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), 검사 결과는 [VALIDATION.md](./VALIDATION.md)를 참고하세요.
 
-출시 주소 결정, Railway 설정, TURN 인증, 배포 후 검사 및 복구 절차는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 있습니다. 현재 상시 배포와 고정 주소는 계정 연결 대기 상태입니다.
+서비스 주소: https://dropgo.up.railway.app . 기존 운영 서버의 공개 QR/전송 검증을 통과했습니다. 최신 최적화본의 재배포 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md), 개선 내용과 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
 
 Node.js **22.12 이상**(개발 검증: Node 24)을 설치한 뒤:
 

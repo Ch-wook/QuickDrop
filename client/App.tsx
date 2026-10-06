@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import QRCode from 'qrcode';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MAX_TEXT_LENGTH, type PublicConfig, type RoomInfo, type Transfer } from '../shared/protocol';
 import { PeerSession, type ConnectionStatus } from './peer';
 import { Icon } from './icons';
@@ -47,30 +46,36 @@ export function App() {
   }
   useEffect(() => {
     const abort = new AbortController();
-    fetch('/api/config', { signal: abort.signal }).then(async response => {
+    const timeout = setTimeout(() => {
+      abort.abort(); setStatus('error'); setError('서버 응답 시간이 초과되었습니다. 새 연결을 시작하세요.');
+    }, 15000);
+    fetch('/api/config', { cache: 'no-store', signal: abort.signal }).then(async response => {
       if (!response.ok) throw new Error('서버 설정을 불러올 수 없습니다.');
       const settings: PublicConfig = await response.json();
+      if (abort.signal.aborted) return;
       setConfig(settings);
       const match = location.pathname.match(/^\/join\/([^/]+)$/);
       start(settings, match ? { roomId: match[1] } : undefined);
-    }).catch(error => { if (!abort.signal.aborted) { setStatus('error'); setError(error.message); } });
+    }).catch(error => { if (!abort.signal.aborted) { setStatus('error'); setError(error.message); } }).finally(() => clearTimeout(timeout));
     const leave = () => session.current?.destroy();
     window.addEventListener('pagehide', leave);
     const restore = (event: PageTransitionEvent) => { if (event.persisted) location.reload(); };
     window.addEventListener('pageshow', restore);
-    return () => { abort.abort(); generation.current++; session.current?.destroy(); window.removeEventListener('pagehide', leave); window.removeEventListener('pageshow', restore); };
+    return () => { clearTimeout(timeout); abort.abort(); generation.current++; session.current?.destroy(); window.removeEventListener('pagehide', leave); window.removeEventListener('pageshow', restore); };
   }, []);
   useEffect(() => {
     if (!joinUrl || !phoneReady) { setQr(''); return; }
     let alive = true;
-    QRCode.toDataURL(joinUrl, { width: 232, margin: 4, color: { dark: '#17243b', light: '#ffffff' }, errorCorrectionLevel: 'M' })
-      .then(value => { if (alive) setQr(value); }).catch(() => setError('QR 코드를 만들 수 없습니다. 연결 코드를 사용하세요.'));
+    import('qrcode').then(module => {
+      if (!alive) return;
+      return module.default.toDataURL(joinUrl, { width: 232, margin: 4, color: { dark: '#17243b', light: '#ffffff' }, errorCorrectionLevel: 'M' });
+    }).then(value => { if (alive && value) setQr(value); }).catch(() => { if (alive) setError('QR 코드를 만들 수 없습니다. 연결 코드를 사용하세요.'); });
     return () => { alive = false; };
   }, [joinUrl, phoneReady]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 2600); return () => clearTimeout(timer); }, [notice]);
   useEffect(() => { if (help) dialog.current?.showModal(); else dialog.current?.close(); }, [help]);
 
-  async function copy(value: string) {
+  const copy = useCallback(async (value: string) => {
     try {
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
       else {
@@ -79,7 +84,8 @@ export function App() {
       }
       setNotice('클립보드에 복사했습니다.');
     } catch { setError('복사 권한이 없습니다. 내용을 직접 선택해 복사하세요.'); }
-  }
+  }, []);
+  const cancelTransfer = useCallback((id: string) => session.current?.transfers?.cancel(id), []);
   function files(selected: File[]) {
     if (!connected) { setError('다른 기기를 먼저 연결하세요.'); return; }
     try { session.current?.transfers?.sendFiles(selected); } catch (error) { setError(error instanceof Error ? error.message : '파일을 보낼 수 없습니다.'); }
@@ -122,7 +128,7 @@ export function App() {
             <div className={`connection-banner ${connected ? 'is-connected' : ''}`} role="status"><span className="banner-icon"><Icon name={connected ? 'check' : 'link'} size={17} /></span><span>{connected ? '두 기기가 연결되었습니다. 바로 보내보세요.' : '기기가 연결되면 전송을 시작할 수 있어요.'}</span><i /></div>
             {error && <div className="error-banner" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="알림 닫기"><Icon name="close" size={15} /></button></div>}
             <div className="history" aria-label="전송 기록" aria-live="polite" aria-relevant="additions">
-              {items.length === 0 ? <div className="empty-state"><div className="empty-illustration"><div className="orbit" /><div className="floating-small"><Icon name="image" size={22} /></div><div className="floating-file"><Icon name="file" size={38} /></div><div className="floating-send"><Icon name="send" size={21} /></div></div><h3>{connected ? '첫 번째 자료를 보내보세요' : '옮기고 싶은 것, 무엇이든.'}</h3><p>링크를 붙여넣거나 파일을 끌어다 놓으세요.<br />자료는 연결된 기기로 바로 전달됩니다.</p><div className="type-chips"><span>텍스트</span><span>링크</span><span>이미지</span><span>파일</span></div></div> : items.map(item => <TransferCard key={item.id} item={item} copy={value => void copy(value)} cancel={id => session.current?.transfers?.cancel(id)} />)}
+              {items.length === 0 ? <div className="empty-state"><div className="empty-illustration"><div className="orbit" /><div className="floating-small"><Icon name="image" size={22} /></div><div className="floating-file"><Icon name="file" size={38} /></div><div className="floating-send"><Icon name="send" size={21} /></div></div><h3>{connected ? '첫 번째 자료를 보내보세요' : '옮기고 싶은 것, 무엇이든.'}</h3><p>링크를 붙여넣거나 파일을 끌어다 놓으세요.<br />자료는 연결된 기기로 바로 전달됩니다.</p><div className="type-chips"><span>텍스트</span><span>링크</span><span>이미지</span><span>파일</span></div></div> : items.map(item => <TransferCard key={item.id} item={item} copy={copy} cancel={cancelTransfer} />)}
             </div>
             <div className={`composer ${!connected ? 'inactive' : ''}`}>
               <label className="sr-only" htmlFor="message">보낼 텍스트 또는 링크</label><textarea ref={textarea} id="message" placeholder={connected ? '텍스트나 링크를 입력하세요. 이미지도 붙여넣을 수 있어요.' : '기기 연결 후 텍스트나 링크를 입력하세요.'} value={text} maxLength={MAX_TEXT_LENGTH} disabled={!connected} onChange={event => setText(event.target.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); sendText(); } }} onPaste={event => { const pasted = Array.from(event.clipboardData.files); if (pasted.length) { event.preventDefault(); files(pasted); } }} />

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
 import { request as httpRequest } from 'node:http';
 import { createApp } from '../server/app';
@@ -6,7 +6,7 @@ import { config } from '../server/config';
 import type { ServerSignal } from '../shared/protocol';
 
 const cleanups: (() => Promise<void>)[] = [];
-afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(); });
+afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(); vi.unstubAllEnvs(); });
 async function setup(roomTtl = 10000) {
   const app = createApp({ ...config, roomTtl, publicUrl: '', trustProxy: 0 });
   await new Promise<void>(resolve => app.server.listen(0, '127.0.0.1', resolve));
@@ -24,6 +24,30 @@ async function setup(roomTtl = 10000) {
   return { ...app, origin, create, connect };
 }
 describe('HTTP and WebSocket integration', () => {
+  it('rejects unknown production upgrade paths and closes cleanly', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const app = await setup();
+    const ws = new WebSocket(`${app.origin.replace('http:', 'ws:')}/not-ws`, { origin: app.origin });
+    const rejection = new Promise<string>(resolve => ws.once('error', error => resolve(error.message)));
+    const closed = new Promise<void>(resolve => ws.once('close', () => resolve()));
+    expect(await rejection).toContain('404');
+    await closed;
+    const first = app.close();
+    expect(app.close()).toBe(first);
+    await first;
+  });
+  it('bounds shutdown even when an HTTP response never finishes', async () => {
+    const app = await setup();
+    app.app.get('/unfinished', (_req, res) => { res.write('waiting'); });
+    await new Promise<void>((resolve, reject) => {
+      const request = httpRequest(`${app.origin}/unfinished`, response => {
+        response.on('error', () => {}); response.resume(); resolve();
+      });
+      request.on('error', reject); request.end();
+    });
+    await app.close();
+    expect(app.server.listening).toBe(false);
+  }, 10000);
   it('serves uncached temporary TURN credentials without disclosing the shared secret', async () => {
     const secret = 'test-shared-secret-with-at-least-32-characters';
     const runtime = createApp({ ...config, publicUrl: '', turnSecret: secret, iceServers: [{ urls: ['turn:relay.example.com:3478'], username: undefined, credential: undefined }] });

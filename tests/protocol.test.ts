@@ -42,6 +42,16 @@ describe('binary chunk assembly', () => {
     assembler.append(0, new ArrayBuffer(1)); expect(() => assembler.finish()).toThrow();
     expect(() => decodeChunk(new ArrayBuffer(40))).toThrow();
     expect(() => encodeChunk(id, 0, new ArrayBuffer(CHUNK_SIZE + 1))).toThrow();
+    expect(() => encodeChunk(id, 0, new ArrayBuffer(0))).toThrow();
+    for (const sequence of [-1, 0.5, 0x100000000, Infinity, NaN]) expect(() => encodeChunk(id, sequence, new ArrayBuffer(1))).toThrow();
+  });
+  it('frames exactly the selected buffer view and owns the encoded bytes', () => {
+    const source = new Uint8Array([1, 2, 3, 4, 5]);
+    const packet = encodeChunk(id, 0xffffffff, source.subarray(1, 4));
+    source.fill(0);
+    const chunk = decodeChunk(packet);
+    expect(chunk.sequence).toBe(0xffffffff);
+    expect(new Uint8Array(chunk.bytes)).toEqual(new Uint8Array([2, 3, 4]));
   });
   it('supports an empty file', () => {
     expect(new FileAssembler({ type: 'FILE_START', id, name: 'empty', size: 0, mime: '' }, 10).finish().size).toBe(0);

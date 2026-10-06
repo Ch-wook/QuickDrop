@@ -2,15 +2,15 @@
 
 최종 정리일: **2026-10-06**. 구현 범위, 수정 이력, 검증 결과, 실행 방법과 남은 작업을 정리합니다.
 
-이번 출시 준비에서 coturn REST 방식의 임시 TURN 인증정보 발급과 설정 API 요청 제한을 추가했습니다. 현재 검사 결과는 단위·통합 58개, production E2E 8개 통과/4개 skip, 운영 빌드 통과, audit 취약점 0개입니다. 아래 이전 검사 수치는 해당 작업 당시 기록입니다. 도메인·배포·운영 절차와 현재 차단 조건은 [DEPLOYMENT.md](./DEPLOYMENT.md)에 정리했습니다. Railway 계정 연결은 아직 확인되지 않아 상시 배포와 도메인 발급은 미완료입니다.
+최적화본 검사 결과: 단위·통합 **83개 통과**, production E2E **8개 통과/4개 skip**, 빌드 통과, audit 취약점 **0개**. QR 코드 분리, 전송 읽기 묶음, 제한기 성능, 압축/캐시, TURN 갱신, 연결 종료 처리를 개선했습니다. 자세한 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다. 아래 이전 검사 수치는 당시 기록입니다.
 
-후속 인증 시도: 사용자는 Railway 웹페이지의 인증 성공을 확인했으나, 공식 CLI의 계정/프로젝트 조회는 `Unauthorized`입니다. 브라우저 콜백 timeout 후 기기 코드 인증으로 재시도한 기록을 배포 문서에 추가했습니다. 원격 서비스는 아직 생성하지 않았고, `railway.app` 자체를 사용자 서비스에 할당할 수 없어 최종 짧은 주소도 미확정입니다.
+사용자가 제공한 Railway 화면에서 기존 서비스를 확인했습니다. https://dropgo.up.railway.app 에서 공개 QR/전송 E2E도 1개 통과했습니다. CLI는 여전히 `Unauthorized`이며 기존 운영 서버는 이전 빌드를 제공 중이므로, 새 최적화본의 재배포 완료와는 구분합니다. 상세 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md)를 참고하세요.
 
 ## 1. 현재 상태
 
 **로컬에서 실행하고 검증할 수 있는 양방향 전송 MVP가 구현되어 있습니다.** 두 브라우저를 연결해 텍스트·링크·이미지·파일을 주고받습니다. 저장소는 [Ch-wook/QuickDrop](https://github.com/Ch-wook/QuickDrop), 브랜치는 `main`입니다.
 
-상시 호스팅 배포와 짧은 고정 도메인 발급은 **미완료**입니다. Railway용 Docker/healthcheck 설정은 준비되어 있지만 배포 계정 연결이 확인되지 않았습니다. 이전 `trycloudflare.com` 주소는 일회성 개발 터널이며 고정 서비스 주소가 아닙니다.
+기존 Railway 서비스는 **Online**이며 공개 주소는 `dropgo.up.railway.app`입니다. 현재 작업 환경의 배포 권한이 확인되지 않아 최신 최적화본 재배포가 남았습니다. 이전 `trycloudflare.com` 주소는 일회성 개발 터널이며 운영 주소가 아닙니다.
 
 ## 2. 서비스 목적
 
@@ -157,7 +157,7 @@ production 및 외부 HTTPS E2E 명령은 README에 있습니다.
 
 | 순서 | 작업 | 필요한 조건 |
 |---|---|---|
-| 1 | Railway 상시 배포, 짧은 기본 도메인 | 계정 연결, 사용 가능한 플랜 확인 |
+| 1 | 기존 Railway 서비스에 최적화본 재배포 | CLI 인증 또는 GitHub 자동 배포 연결 확인 |
 | 2 | 실제 iPhone/Android QR·전송·저장 | 실기기와 접근 가능한 HTTPS |
 | 3 | 서로 다른 통신망 및 TURN 확인 | TURN/단기 credential |
 | 4 | Docker 실행/healthcheck 검증 | Docker 실행 환경 |
@@ -172,3 +172,4 @@ Remember Device, PWA, Share Target, 3대 이상 연결, Offline Drop, Push, Tran
 - [PROJECT_STATUS.md](./PROJECT_STATUS.md): 진행 현황과 작업 인수인계
 - [VALIDATION.md](./VALIDATION.md): 실제 검사 결과 및 한계
 - [DEPLOYMENT.md](./DEPLOYMENT.md): 출시 주소·환경 설정·검증·복구 절차
+- [OPTIMIZATION.md](./OPTIMIZATION.md): 최적화 수치와 회귀 검사

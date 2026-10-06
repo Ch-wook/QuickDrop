@@ -39,6 +39,7 @@ QuickDrop/
 │  ├─ app.ts                   API, WS upgrade, origin 검사, heartbeat
 │  ├─ config.ts                환경 변수 읽기, 범위와 PUBLIC_URL 검증
 │  ├─ ice.ts                   coturn REST 임시 인증정보 발급, 비밀키 서버 보관
+│  ├─ static.ts                사전 압축 파일 협상, 자산 캐시, HTML 재검증
 │  └─ rooms.ts                 Room 생성/참가/삭제/TTL, rate limiter
 ├─ shared/
 │  ├─ protocol.ts              메시지 타입/schema, chunk framing/조립
@@ -47,6 +48,8 @@ QuickDrop/
 │  ├─ mobile.mjs               HTTPS 터널 + production 서버 실행/정리
 │  ├─ mobile-health.mjs        로컬 세션 일치 및 공개 HTTPS 상태 검사
 │  ├─ mobile-status.mjs        npm run mobile:status 명령
+│  ├─ compress-assets.mjs      JS/CSS Brotli/gzip 사전 압축
+│  ├─ verify-deployment.mjs    공개 서버와 로컬 빌드 해시·내용·캐시 비교
 │  └─ cloudflared-release.json 고정된 공식 도구 버전과 SHA-256
 ├─ tests/
 │  ├─ rooms.test.ts            Room 수명, 2 Peer 제한, rate limit
@@ -54,6 +57,8 @@ QuickDrop/
 │  ├─ transfers.test.ts        전송 상태/ACK/취소/용량/타임아웃
 │  ├─ server.test.ts           실제 HTTP/WS, origin, TTL, canonical URL
 │  ├─ ice.test.ts              TURN 인증 만료·서명·독립성·비밀키 비노출
+│  ├─ peer.test.ts             인증 갱신·타임아웃·종료 후 비동기 처리
+│  ├─ static.test.ts           압축 응답 원본 비교·캐시·HEAD·304·경로 검사
 │  ├─ connection-url.test.ts   loopback/HTTP/HTTPS 주소 회귀 테스트
 │  ├─ mobile-health.test.mjs   종료/오래된 주소/DNS 실패 회귀 검사
 │  └─ e2e/
@@ -75,6 +80,8 @@ QuickDrop/
 ├─ README.md                  사용/개발/운영 설명
 ├─ PROJECT_STRUCTURE.md       이 문서
 ├─ PROJECT_STATUS.md          진행 현황, 수정 이력, 남은 작업
+├─ DEPLOYMENT.md              실제 운영 주소, 배포·검증·복구
+├─ OPTIMIZATION.md            성능 측정과 최적화 기록
 └─ VALIDATION.md              실제 검증 결과와 미검증 범위
 ```
 

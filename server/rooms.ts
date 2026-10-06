@@ -50,16 +50,25 @@ export class Rooms {
 
 export class RateLimiter {
   private entries = new Map<string, { count: number; until: number }>();
-  constructor(private limit: number, private interval: number, private now = Date.now) {}
+  // Fixed windows + a monotonic clock keep expiration in insertion order.
+  constructor(private limit: number, private interval: number, private now = () => performance.now()) {}
   allow(key: string): boolean {
-    this.sweep();
+    const now = this.now();
+    this.sweep(now);
     let entry = this.entries.get(key);
     if (!entry) {
       if (this.entries.size >= 20000) return false;
-      entry = { count: 0, until: this.now() + this.interval };
+      entry = { count: 0, until: now + this.interval };
       this.entries.set(key, entry);
     }
-    return ++entry.count <= this.limit;
+    if (entry.count >= this.limit) return false;
+    entry.count++;
+    return true;
   }
-  sweep() { for (const [key, value] of this.entries) if (value.until <= this.now()) this.entries.delete(key); }
+  sweep(now = this.now()) {
+    for (const [key, value] of this.entries) {
+      if (value.until > now) break;
+      this.entries.delete(key);
+    }
+  }
 }

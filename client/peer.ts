@@ -24,7 +24,10 @@ export class PeerSession {
   constructor(private config: PublicConfig, private callbacks: Callbacks) {}
 
   async start(target?: { roomId?: string; code?: string }) {
+    if (this.closed || this.terminal) return;
     this.callbacks.status('starting');
+    // Bound room creation as well as the WebSocket handshake.
+    this.socketTimer = setTimeout(() => this.fail('연결 서버 응답 시간이 초과되었습니다. 다시 시도하세요.'), 15000);
     try {
       if (!globalThis.RTCPeerConnection || !globalThis.crypto?.randomUUID) throw new Error('이 브라우저에서는 연결을 시작할 수 없습니다. HTTPS 주소와 최신 브라우저를 사용하세요.');
       let join: Extract<ClientSignal, { type: 'JOIN' }>;
@@ -36,11 +39,10 @@ export class PeerSession {
         const room = result as CreatedRoom;
         join = { type: 'JOIN', roomId: room.roomId, ownerToken: room.ownerToken };
       }
-      if (this.closed) return;
+      if (this.closed || this.terminal) return;
       const url = new URL('/ws', location.href);
       url.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = this.ws = new WebSocket(url);
-      this.socketTimer = setTimeout(() => this.fail('연결 서버 응답 시간이 초과되었습니다. 다시 시도하세요.'), 15000);
       ws.onopen = () => this.signal(join);
       ws.onmessage = event => {
         this.signalChain = this.signalChain.then(async () => {
@@ -51,6 +53,7 @@ export class PeerSession {
       ws.onclose = () => {
         clearTimeout(this.socketTimer);
         if (this.closed || this.terminal) return;
+        this.terminal = true; this.abort.abort();
         this.resetConnection(); this.callbacks.status('disconnected');
         this.callbacks.error('서버 연결이 끊겼습니다. 새 연결을 시작하세요.');
       };
@@ -68,8 +71,18 @@ export class PeerSession {
       case 'PEER_JOINED': {
         this.resetConnection();
         this.callbacks.status('connecting');
-        const pc = this.pc = new RTCPeerConnection({ iceServers: this.config.iceServers });
         this.connectionTimer = setTimeout(() => this.fail('기기 간 직접 연결에 실패했습니다. 네트워크를 확인하고 다시 시도하세요. 일부 네트워크에는 TURN 서버가 필요합니다.'), 30000);
+        // A tab can stay open longer than temporary TURN credentials remain valid.
+        // Fetch fresh relay credentials only when a new negotiation needs them.
+        if (this.config.iceServers.some(server => [server.urls].flat().some(url => /^turns?:/i.test(url)))) {
+          const response = await fetch('/api/config', { cache: 'no-store', signal: this.abort.signal });
+          if (!response.ok) throw new Error('연결 설정을 새로 불러올 수 없습니다.');
+          const settings: PublicConfig = await response.json();
+          if (this.closed || this.terminal) return;
+          this.config = settings;
+        }
+        if (this.closed || this.terminal) return;
+        const pc = this.pc = new RTCPeerConnection({ iceServers: this.config.iceServers });
         pc.onicecandidate = event => { if (event.candidate && this.pc === pc) this.signal({ type: 'ICE_CANDIDATE', candidate: event.candidate.toJSON() as RTCIceCandidateInit & { candidate: string } }); };
         pc.onconnectionstatechange = () => {
           if (this.pc !== pc) return;
@@ -82,7 +95,9 @@ export class PeerSession {
         pc.ondatachannel = event => this.attachChannel(event.channel, pc);
         if (message.initiator) {
           this.attachChannel(pc.createDataChannel('quickdrop', { ordered: true }), pc);
-          await pc.setLocalDescription(await pc.createOffer());
+          const offer = await pc.createOffer();
+          if (this.pc !== pc) return;
+          await pc.setLocalDescription(offer);
           if (this.pc === pc) this.signal({ type: 'OFFER', sdp: pc.localDescription!.sdp });
         }
         break;
@@ -92,9 +107,15 @@ export class PeerSession {
         const pc = this.pc;
         if (!pc) throw new Error('No connection');
         await pc.setRemoteDescription({ type: message.type === 'OFFER' ? 'offer' : 'answer', sdp: message.sdp });
-        for (const candidate of this.candidates.splice(0)) await pc.addIceCandidate(candidate);
+        if (this.pc !== pc) return;
+        for (const candidate of this.candidates.splice(0)) {
+          await pc.addIceCandidate(candidate);
+          if (this.pc !== pc) return;
+        }
         if (message.type === 'OFFER') {
-          await pc.setLocalDescription(await pc.createAnswer());
+          const answer = await pc.createAnswer();
+          if (this.pc !== pc) return;
+          await pc.setLocalDescription(answer);
           if (this.pc === pc) this.signal({ type: 'ANSWER', sdp: pc.localDescription!.sdp });
         }
         break;
@@ -107,7 +128,7 @@ export class PeerSession {
         this.resetConnection(); this.callbacks.status('waiting');
         this.callbacks.error('상대 기기가 나갔습니다. 같은 QR 또는 코드로 다시 연결할 수 있습니다.'); break;
       case 'ROOM_EXPIRED':
-        this.terminal = true; this.resetConnection(); this.callbacks.status('expired');
+        this.terminal = true; this.abort.abort(); this.resetConnection(); this.ws?.close(); this.callbacks.status('expired');
         this.callbacks.error('연결 대기 시간이 만료되었습니다. 새 연결을 시작하세요.'); break;
       case 'ERROR': this.fail(message.message); break;
     }
@@ -142,7 +163,7 @@ export class PeerSession {
   }
   private fail(message: string) {
     if (this.closed || this.terminal) return;
-    this.terminal = true; clearTimeout(this.socketTimer);
+    this.terminal = true; this.abort.abort(); clearTimeout(this.socketTimer);
     this.resetConnection(); this.ws?.close();
     this.callbacks.status('error'); this.callbacks.error(message);
   }
