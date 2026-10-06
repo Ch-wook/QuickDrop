@@ -50,6 +50,7 @@ QuickDrop/
 │  ├─ mobile-status.mjs        npm run mobile:status 명령
 │  ├─ compress-assets.mjs      JS/CSS Brotli/gzip 사전 압축
 │  ├─ verify-deployment.mjs    공개 서버와 로컬 빌드 해시·내용·캐시 비교
+│  ├─ search-submit.mjs        공개 소유 증명 확인 후 네이버 IndexNow에 홈페이지 제출
 │  └─ cloudflared-release.json 고정된 공식 도구 버전과 SHA-256
 ├─ tests/
 │  ├─ rooms.test.ts            Room 수명, 2 Peer 제한, rate limit
@@ -65,7 +66,11 @@ QuickDrop/
 │     ├─ quickdrop.spec.ts     같은 엔진 두 컨텍스트의 전송 전체 흐름
 │     ├─ interoperability.spec.ts Chromium ↔ Firefox 실제 전송
 │     └─ mobile.spec.ts        공개 HTTPS QR → WSS → WebRTC 전송
-├─ public/favicon.svg
+├─ public/
+│  ├─ favicon.svg
+│  ├─ robots.txt              검색 수집 안내, API/WS 제외
+│  ├─ sitemap.xml             홈페이지 한 개만 포함
+│  └─ <IndexNow-key>.txt      공개 소유 증명 파일; 계정 인증 토큰 아님
 ├─ index.html                 SPA HTML 진입점
 ├─ package.json / package-lock.json
 ├─ tsconfig.json              TypeScript strict 설정
@@ -82,6 +87,7 @@ QuickDrop/
 ├─ PROJECT_STATUS.md          진행 현황, 수정 이력, 남은 작업
 ├─ DEPLOYMENT.md              실제 운영 주소, 배포·검증·복구
 ├─ OPTIMIZATION.md            성능 측정과 최적화 기록
+├─ SEARCH.md                  무료 검색 접근 구성·제출 방법과 상태
 └─ VALIDATION.md              실제 검증 결과와 미검증 범위
 ```
 
@@ -154,7 +160,7 @@ WS 메시지: `JOIN`, `JOINED`, `PEER_JOINED`, `OFFER`, `ANSWER`, `ICE_CANDIDATE
 - 수신자는 transfer ID, 순서, 총 크기를 확인하고 Blob을 만듭니다.
 - 수신 확인 ACK가 도착해야 송신 측에서도 완료 상태로 바뀝니다.
 - 전송 상태: `sending → confirming → complete`, `receiving → complete`, 오류/취소 시 `error` 또는 `cancelled`.
-- 파일당 기본 100MiB, 수신 보관 합계 200MiB, 기록 300개, 대기열 20개 제한.
+- 파일당 기본 200MiB(209,715,200 bytes), 수신 보관 합계 200MiB, 기록 300개, 대기열 20개 제한. 보관한 수신 파일은 공간을 계속 사용하므로 저장 후 기록을 비우면 수신 용량을 확보할 수 있습니다.
 - 기록 비우기/새 세션/종료 시 Blob URL과 수신 메모리를 해제합니다.
 - JPEG/PNG/WebP만 이미지로 preview하며 다른 파일은 사용자 클릭으로 다운로드합니다.
 
@@ -205,7 +211,7 @@ npm start
 docker compose up --build -d
 ```
 
-Railway의 `quickdrop` 서비스에 GitHub `Ch-wook/QuickDrop`의 `main` 소스를 연결했습니다. `railway.json` + `Dockerfile`로 코드 `91aba3b`를 배포했으며 **https://dropgo.up.railway.app** 에서 최신 JS/CSS·압축·캐시 일치와 공개 QR/전송을 검증했습니다. `/api/config`의 `PUBLIC_URL`도 같은 HTTPS origin입니다. 운영 설정은 `TRUST_PROXY=1`, `HOST=0.0.0.0`을 기준으로 하며 Room이 메모리 상태이므로 **replica는 1개**로 유지합니다. CLI 인증 제한과 후속 푸시 자동 배포의 미검증 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 기록합니다.
+Railway의 `quickdrop` 서비스에 GitHub `Ch-wook/QuickDrop`의 `main` 소스를 연결했습니다. `railway.json` + `Dockerfile`로 코드 `91aba3b`를 배포했으며 **https://dropgo.up.railway.app** 에서 최신 JS/CSS·압축·캐시 일치와 공개 QR/전송을 검증했습니다. `/api/config`의 `PUBLIC_URL`도 같은 HTTPS origin입니다. 운영 설정은 `TRUST_PROXY=1`, `HOST=0.0.0.0`을 기준으로 하며 Room이 메모리 상태이므로 **replica는 1개**로 유지합니다. 후속 문서 커밋 `d783cd9`의 푸시 자동 배포도 성공했습니다. 배포 증거와 남아 있는 CLI 인증 제한은 [DEPLOYMENT.md](./DEPLOYMENT.md)에 기록합니다.
 
 ## 9. 주요 환경 변수
 
@@ -214,7 +220,7 @@ Railway의 `quickdrop` 서비스에 GitHub `Ch-wook/QuickDrop`의 `main` 소스�
 | `PORT` / `HOST` | 3000 / 0.0.0.0; 호스팅이 제공하는 PORT 사용 가능 |
 | `PUBLIC_URL` | 두 기기에서 접속할 HTTPS origin; localhost/HTTP 값은 거부 |
 | `ROOM_TTL` | 600000ms; 2 Peer 미만 대기 Room TTL |
-| `MAX_FILE_SIZE` | 104857600 bytes |
+| `MAX_FILE_SIZE` | 209715200 bytes; 파일당 200MiB |
 | `MAX_SESSION_BYTES` | 209715200 bytes |
 | `STUN_URL` | 기본 Google STUN; 빈 값이면 비활성 |
 | `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD` | 선택적인 TURN 연결 설정 |

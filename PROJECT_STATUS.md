@@ -2,6 +2,8 @@
 
 최종 정리일: **2026-10-06**. 구현 범위, 수정 이력, 검증 결과, 실행 방법과 남은 작업을 정리합니다.
 
+후속 변경: 파일당 기본 한도를 **200MiB(209,715,200 bytes)**로 높이고 검색용 제목·설명·사이트맵·임시 참가 링크의 검색 제외 및 네이버 제출 명령을 추가했습니다. 새 코드의 단위·통합 **86개 통과**, 빌드 통과를 확인했으며 운영 반영과 검색 제출 결과는 배포 후 따로 확인합니다. 검색 구성은 [SEARCH.md](./SEARCH.md)에 있습니다. 아래 83개 검사와 공개 E2E는 앞선 최적화 배포의 기록입니다.
+
 최적화본 검사 결과: 단위·통합 **83개 통과**, 로컬 production E2E **8개 통과/4개 skip**, 공개 E2E **2개 통과**, 빌드 통과, audit 취약점 **0개**. QR 코드 분리, 전송 읽기 묶음, 제한기 성능, 압축/캐시, TURN 갱신, 연결 종료 처리를 개선했습니다. 자세한 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
 
 최적화본 코드 `91aba3b`가 https://dropgo.up.railway.app 에 배포됐습니다. 로컬 빌드와 공개 JS/CSS의 해시·내용 및 Brotli/캐시 설정 일치를 확인하고 Chromium·Firefox에서 실제 QR/WSS/WebRTC 전송을 검증했습니다. 상세 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md)를 참고하세요.
@@ -10,7 +12,9 @@
 
 **양방향 전송 MVP의 구현·최적화·Railway 배포를 완료했습니다.** 두 브라우저를 연결해 텍스트·링크·이미지·파일을 주고받습니다. 저장소는 [Ch-wook/QuickDrop](https://github.com/Ch-wook/QuickDrop), 연결된 배포 소스 브랜치는 `main`입니다.
 
-Railway 공개 주소는 **https://dropgo.up.railway.app**입니다. CLI의 `Unauthorized`는 남아 있지만 GitHub Source를 통한 이번 배포는 성공했습니다. 후속 푸시만으로 자동 배포가 시작되는지는 미검증입니다. 이전 `trycloudflare.com` 주소는 일회성 개발 터널이며 운영 주소가 아닙니다.
+Railway 공개 주소는 **https://dropgo.up.railway.app**입니다. CLI의 `Unauthorized`는 남아 있지만 GitHub Source를 통한 배포는 성공했습니다. 기능 검증 기준 코드 `91aba3b` 배포 이후 문서 커밋 `d783cd9`를 푸시해 자동 배포 시작과 성공까지 확인했습니다. 이전 `trycloudflare.com` 주소는 일회성 개발 터널이며 운영 주소가 아닙니다.
+
+사용자는 휴대폰 연결 성공을 알려왔습니다. 휴대폰 OS·브라우저 종류와 실제 파일 전송·저장 성공 여부는 아직 확인하지 않았습니다.
 
 ## 2. 서비스 목적
 
@@ -86,7 +90,7 @@ DataChannel 종료 이벤트가 `PEER_LEFT`보다 먼저 도착하는 경우 짧
 
 상세 파일 트리, 프로토콜, 환경 변수와 연결 diagram은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)에 있습니다.
 
-## 6. 검증 결과
+## 6. 앞선 최적화 배포 검증 결과 (2026-10-06)
 
 | 검사 | 결과 |
 |---|---|
@@ -98,7 +102,7 @@ DataChannel 종료 이벤트가 `PEER_LEFT`보다 먼저 도착하는 경우 짧
 | 공개 빌드 일치 | deploy:verify 통과; JS/CSS 해시·내용, Brotli/캐시, health/PUBLIC_URL |
 | 모바일 상태 명령 | 종료된 로컬 서버를 `stopped`로 판정함을 실제 확인 |
 | 상태 검사 회귀 | 중지, 세션 불일치, DNS 실패, 정상/잘못된 응답 |
-| 실기기/외부 TURN | 미검증 |
+| 실기기/외부 TURN | 사용자 휴대폰 연결 성공 제보; OS별 전송·저장과 운영 TURN 미검증 |
 | 로컬 Docker Compose | Docker CLI가 없어 미실행 |
 | 상시 배포/고정 주소 | Railway 배포 성공, dropgo.up.railway.app |
 
@@ -146,7 +150,7 @@ production 및 외부 HTTPS E2E 명령은 README에 있습니다.
 
 ## 8. 제한과 보안
 
-- 파일당 100MiB, 수신 보관 합계 200MiB, 파일 큐 20개, 기록 300개.
+- 파일당 기본 200MiB(209,715,200 bytes), 수신 보관 합계 200MiB, 파일 큐 20개, 기록 300개. 기존 수신 파일이 남아 있으면 새 파일을 받을 공간이 부족할 수 있으므로 저장 후 기록을 비웁니다.
 - Room 최대 2 Peer, 대기 TTL 10분, JOIN IP당 분당 10회.
 - QR/코드를 아는 사람은 참가할 수 있으며 별도 사용자 인증은 없습니다.
 - HTTPS/WSS, origin/schema/payload 검사, 파일명 정제, React escaping 적용.
@@ -158,11 +162,10 @@ production 및 외부 HTTPS E2E 명령은 README에 있습니다.
 
 | 순서 | 작업 | 필요한 조건 |
 |---|---|---|
-| 1 | 실제 iPhone/Android QR·전송·저장 | 실기기 |
+| 1 | 실제 iPhone/Android QR·전송·저장 | 사용자 연결 제보에 더해 OS별 전송·저장 확인 |
 | 2 | 서로 다른 통신망 및 TURN 확인 | 운영 TURN 서버/단기 credential |
 | 3 | 로컬 Docker Compose 실행/healthcheck 검증 | Docker 실행 환경 |
-| 4 | 100MiB 경계·장시간·백그라운드 | 실기기 메모리/네트워크 검증 |
-| 5 | 후속 푸시 자동 배포 동작 확인 | Railway 자동 배포 설정·실제 후속 배포 확인 |
+| 4 | 200MiB 경계·장시간·백그라운드 | 실기기 메모리/네트워크 검증 |
 
 Remember Device, PWA, Share Target, 3대 이상 연결, Offline Drop, Push, Transfer Resume는 원래 MVP 범위 밖이며 미구현입니다.
 
@@ -174,3 +177,4 @@ Remember Device, PWA, Share Target, 3대 이상 연결, Offline Drop, Push, Tran
 - [VALIDATION.md](./VALIDATION.md): 실제 검사 결과 및 한계
 - [DEPLOYMENT.md](./DEPLOYMENT.md): 출시 주소·환경 설정·검증·복구 절차
 - [OPTIMIZATION.md](./OPTIMIZATION.md): 최적화 수치와 회귀 검사
+- [SEARCH.md](./SEARCH.md): 무료 검색 접근 구성과 검색엔진 제출 상태

@@ -41,7 +41,7 @@
 
 ## 배포 확인
 
-배포 코드 `91aba3b`의 Railway 배포가 성공했습니다. 공개 서버가 `index-DlbgtMzG.js`와 `index-DFBmzxZh.css`를 제공하며 로컬 빌드와 해시·내용이 일치합니다. Brotli/캐시 응답, healthcheck 및 PUBLIC_URL도 검증했습니다. CLI는 여전히 `Unauthorized`이지만 GitHub Source로 배포를 완료했습니다. 후속 푸시만으로 자동 배포가 시작되는지는 미검증입니다. 배포 ID와 상세 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md)를 참고하세요.
+기능 검증 기준 코드 `91aba3b`의 Railway 배포가 성공했습니다. 공개 서버가 `index-DlbgtMzG.js`와 `index-DFBmzxZh.css`를 제공하며 로컬 빌드와 해시·내용이 일치합니다. Brotli/캐시 응답, healthcheck 및 PUBLIC_URL도 검증했습니다. CLI는 여전히 `Unauthorized`이지만 GitHub Source로 배포를 완료했습니다. 이후 문서 커밋 `d783cd9` 푸시로 자동 배포가 시작돼 성공한 것도 확인했습니다. 배포 ID와 상세 상태는 [DEPLOYMENT.md](./DEPLOYMENT.md)를 참고하세요.
 
 ```powershell
 npm run build

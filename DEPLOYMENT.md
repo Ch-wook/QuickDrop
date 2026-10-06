@@ -2,11 +2,14 @@
 
 확인일: 2026-10-06. **최적화본을 https://dropgo.up.railway.app 에 배포하고 검증했습니다.** GitHub의 Railway 배포 성공 상태와 공개 서버의 실제 자산 해시·내용·압축·캐시 설정을 확인했습니다. Chromium·Firefox 공개 E2E 2개가 통과했으며 QR 해독, WSS, WebRTC 텍스트 및 72,000-byte 파일의 다운로드 일치를 검증했습니다.
 
+후속 200MiB·검색 접근 변경은 단위·통합 86개 및 빌드 검사를 통과했습니다. 이 변경의 원격 반영은 아직 별도 확인 전이며 아래 배포 ID와 공개 E2E는 앞선 최적화본 기준입니다. 검색 제출 상태는 [SEARCH.md](./SEARCH.md)에 기록합니다.
+
 - 프로젝트: `ab9bfe11-b642-4f84-8549-943a09c71d2e`
 - 환경: `production` (`8f80c170-be57-409d-ba7e-86c0fafa6681`)
 - 서비스: `quickdrop` (`ae67e523-51d8-469b-8f7e-0f1b37e53c03`)
 - 성공한 배포: `9a5e86b0-5dc8-4836-a2f3-3e01db2a4479`
-- 배포 코드: [`91aba3b8f5d5331b0917b7cd219000b0a5cb8bc6`](https://github.com/Ch-wook/QuickDrop/commit/91aba3b8f5d5331b0917b7cd219000b0a5cb8bc6)
+- 기능 검증 기준 코드: [`91aba3b8f5d5331b0917b7cd219000b0a5cb8bc6`](https://github.com/Ch-wook/QuickDrop/commit/91aba3b8f5d5331b0917b7cd219000b0a5cb8bc6)
+- 후속 문서 푸시 자동 배포: [`d783cd9ac2a996c5a4d9985856b193e290c14e80`](https://github.com/Ch-wook/QuickDrop/commit/d783cd9ac2a996c5a4d9985856b193e290c14e80), 배포 `7121c779-8733-451e-977f-f3ad05ff2824` 성공
 - 확인한 자산: `index-DlbgtMzG.js`, `index-DFBmzxZh.css`
 - 새 빌드 확인: `npm run deploy:verify -- https://dropgo.up.railway.app`
 - 개선 내용/측정: [OPTIMIZATION.md](./OPTIMIZATION.md)
@@ -54,7 +57,7 @@ CLI 인증이 완료되면 프로젝트 루트에서 기존 서비스에 업로�
 npx --yes @railway/cli@5.63.3 up --project ab9bfe11-b642-4f84-8549-943a09c71d2e --service quickdrop --environment production --detach
 ```
 
-GitHub Source는 연결됐고 이번 배포는 성공했습니다. 제공된 Railway 화면에는 자동 배포 사용 불가 표시가 있었으므로, 향후 `main` 푸시만으로 자동 배포가 시작되는지는 아직 확인하지 않았습니다. 필요하면 Railway에서 해당 커밋의 배포를 실행합니다. 단순 Redeploy는 이전 소스의 재배포일 수 있으므로, 반드시 새 커밋으로 빌드됐는지와 `deploy:verify` 결과를 확인합니다.
+GitHub Source 연결 후 문서 커밋 `d783cd9`를 `main`에 푸시하자 별도 사용자 조작 없이 Railway 배포가 시작됐고, GitHub 상태가 `pending`에서 `success`로 바뀌었습니다. 배포 `7121c779-8733-451e-977f-f3ad05ff2824`의 성공으로 푸시 자동 배포까지 확인했습니다. 앞선 화면의 자동 배포 사용 불가 표시와 실제 동작을 구분해 기록합니다. 후속 코드 배포에서도 커밋 상태와 `deploy:verify` 결과를 확인합니다. 단순 Redeploy는 이전 소스의 재배포일 수 있습니다.
 
 | 변수 | 운영 설정 |
 |---|---|
@@ -64,10 +67,12 @@ GitHub Source는 연결됐고 이번 배포는 성공했습니다. 제공된 Rai
 | PUBLIC_URL | 실제 발급된 `https://...` origin, 경로 없음 |
 | TRUST_PROXY | 직접 Railway reverse proxy 1단계 구성에서 1; 추가 프록시가 있으면 실제 경로 검증 |
 | ROOM_TTL | 600000 |
-| MAX_FILE_SIZE | 104857600 |
+| MAX_FILE_SIZE | 209715200 (파일당 200MiB) |
 | MAX_SESSION_BYTES | 209715200 |
 
 `PUBLIC_URL`과 프록시 HTTPS 정보가 다르면 리디렉션 반복 또는 origin 거부가 발생할 수 있습니다. `/api/health` 성공만으로 QR/전송까지 정상이라고 판단하지 않습니다. 기존 PC의 임시 trycloudflare 주소는 출시 주소로 사용하지 않습니다.
+
+기존 Railway 환경 변수에 `MAX_FILE_SIZE=104857600`이 남아 있으면 새 코드의 200MiB 기본값보다 우선합니다. 변경 배포 후 `/api/config`의 `maxFileSize`가 `209715200`인지 확인합니다. 수신 보관 합계 `MAX_SESSION_BYTES`는 200MiB로 유지합니다.
 
 ## 서로 다른 통신망: TURN
 
@@ -109,7 +114,7 @@ Remove-Item Env:E2E_BASE_URL
 
 공개 주소 E2E는 QR을 해독하고, 두 브라우저의 WSS 접속·WebRTC 연결·텍스트 및 파일 전송·다운로드 byte 일치를 확인합니다. 테스트 완료 후 페이지를 닫아 임시 Room을 정리합니다.
 
-실제 Android Chrome 및 iPhone Safari에서 QR, 코드 입력, 양방향 파일/이미지 저장을 별도로 확인합니다. PC Wi-Fi ↔ 휴대폰 셀룰러와 TURN 강제 relay도 확인해야 합니다. 현재 이 실기기/운영 TURN 검증은 미완료입니다.
+사용자는 휴대폰 연결 성공을 알려왔지만 OS·브라우저와 파일 전송·저장 여부는 확인하지 않았습니다. 실제 Android Chrome 및 iPhone Safari에서 QR, 코드 입력, 양방향 파일/이미지 저장을 별도로 확인합니다. PC Wi-Fi ↔ 휴대폰 셀룰러와 TURN 강제 relay도 확인해야 합니다.
 
 ## 운영 및 복구
 
@@ -128,11 +133,11 @@ Remove-Item Env:E2E_BASE_URL
 | 의존성 audit | 알려진 취약점 0개 |
 | Railway 배포 | GitHub Source 연결 후 성공, 배포 코드 91aba3b |
 | Railway CLI 인증 | Unauthorized 유지; 완료된 GitHub 소스 배포와 별개 |
-| 후속 푸시 자동 배포 | 미검증, 제공 화면에 자동 배포 사용 불가 표시 |
+| 후속 푸시 자동 배포 | d783cd9 문서 푸시로 자동 시작·성공 확인 |
 | 공개 서비스/HTTPS 주소 | dropgo.up.railway.app 정상 응답 |
 | 최적화본 공개 E2E | Chromium·Firefox 2개 통과, 16.0초 |
 | 최적화본 원격 반영 | deploy:verify 통과; 로컬 JS/CSS 해시·내용, Brotli/캐시, health/PUBLIC_URL 일치 |
 | 화면 확인 | 데스크톱 QR, 390px 모바일 연결·텍스트·다운로드 화면 확인 |
-| 실기기 / 운영 TURN | 미실행 |
+| 실기기 / 운영 TURN | 사용자 휴대폰 연결 제보; OS별 전송·저장 및 운영 TURN 미검증 |
 
-이번 최적화본 배포와 공개 브라우저 검증은 완료했습니다. 실제 iPhone/Android, 통신망 간 연결, 운영 TURN, 100MiB 경계 및 장시간 전송 검증은 후속 작업입니다.
+앞선 최적화본 배포와 공개 브라우저 검증은 완료했습니다. 실제 iPhone/Android, 통신망 간 연결, 운영 TURN, 현재 기본 한도인 200MiB 경계 및 장시간 전송 검증은 후속 작업입니다.

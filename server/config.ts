@@ -23,7 +23,7 @@ export const config = {
   publicUrl,
   turnSecret,
   turnCredentialTtl: numberEnv('TURN_CREDENTIAL_TTL', 3600, 600, 86400),
-  maxFileSize: numberEnv('MAX_FILE_SIZE', 104857600, 1, 1073741824),
+  maxFileSize: numberEnv('MAX_FILE_SIZE', 209715200, 1, 1073741824),
   maxSessionBytes: numberEnv('MAX_SESSION_BYTES', 209715200, 1, 2147483648),
   iceServers: [
     ...(process.env.STUN_URL === '' ? [] : [{ urls: process.env.STUN_URL || 'stun:stun.l.google.com:19302' }]),

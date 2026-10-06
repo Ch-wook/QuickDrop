@@ -134,7 +134,7 @@ export function App() {
               <label className="sr-only" htmlFor="message">보낼 텍스트 또는 링크</label><textarea ref={textarea} id="message" placeholder={connected ? '텍스트나 링크를 입력하세요. 이미지도 붙여넣을 수 있어요.' : '기기 연결 후 텍스트나 링크를 입력하세요.'} value={text} maxLength={MAX_TEXT_LENGTH} disabled={!connected} onChange={event => setText(event.target.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); sendText(); } }} onPaste={event => { const pasted = Array.from(event.clipboardData.files); if (pasted.length) { event.preventDefault(); files(pasted); } }} />
               <div className="composer-toolbar"><input ref={input} className="sr-only" type="file" id="files" multiple disabled={!connected} onChange={event => { files(Array.from(event.target.files || [])); event.target.value = ''; }} /><button className="attach-button" disabled={!connected} onClick={() => input.current?.click()}><Icon name="paperclip" size={18} />파일 첨부</button><label className="sr-only" htmlFor="files">전송할 파일 선택</label><span className="shortcut">Ctrl / ⌘ + Enter</span><button className="send-button" disabled={!connected || !text.trim()} onClick={sendText}>보내기<Icon name="arrow" size={17} /></button></div>
             </div>
-            <div className="transfer-footnote"><Icon name="shield" size={13} /><span>서버에 파일을 저장하지 않아요.</span><span className="file-limit">파일당 최대 {formatBytes(config?.maxFileSize || 104857600)}</span></div>
+            <div className="transfer-footnote"><Icon name="shield" size={13} /><span>서버에 파일을 저장하지 않아요.</span><span className="file-limit">파일당 최대 {formatBytes(config?.maxFileSize || 209715200)}</span></div>
           </div>
         </section>
       </div>

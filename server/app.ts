@@ -29,6 +29,9 @@ export function createApp(config: Config) {
   };
   app.use((req, res, next) => {
     res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' });
+    // Only the public home page belongs in search results. A crawler must be
+    // able to read this header on temporary invitation URLs to honor noindex.
+    if (/^\/(?:join|api|ws)(?:\/|$)/i.test(req.path)) res.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
     if (req.secure) res.set('Strict-Transport-Security', 'max-age=31536000');
     if (process.env.NODE_ENV === 'production') res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' ws: wss:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
     next();

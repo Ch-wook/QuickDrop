@@ -24,6 +24,19 @@ async function setup(roomTtl = 10000) {
   return { ...app, origin, create, connect };
 }
 describe('HTTP and WebSocket integration', () => {
+  it('keeps temporary invitation pages and APIs out of search results', async () => {
+    const runtime = await setup();
+    runtime.app.get(['/', '/join/:roomId'], (_req, res) => res.type('html').send('<h1>QuickDrop</h1>'));
+    const home = await fetch(runtime.origin);
+    expect(home.headers.get('x-robots-tag')).toBeNull();
+    for (const url of ['/join/private-room', '/JOIN/private-room', '/api/config']) {
+      const response = await fetch(`${runtime.origin}${url}`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow, noarchive');
+    }
+    const head = await fetch(`${runtime.origin}/join/private-room`, { method: 'HEAD' });
+    expect(head.headers.get('x-robots-tag')).toContain('noindex');
+  });
   it('rejects unknown production upgrade paths and closes cleanly', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     const app = await setup();

@@ -84,6 +84,39 @@ it('enforces incoming limits and frees budget when history is cleared', async ()
   expect(JSON.parse(app.channel.sent.at(-1) as string).type).toBe('TRANSFER_ERROR');
   app.engine.clearHistory(); expect(app.records()).toHaveLength(0);
 });
+it('accepts exactly 200 MiB from the sender and rejects a file one byte above the limit', () => {
+  const limit = 200 * 1024 * 1024;
+  const app = setup({ ...config, maxFileSize: limit, maxSessionBytes: limit });
+  app.channel.bufferedAmount = 2000000;
+  // Declared sizes exercise admission without allocating the entire files.
+  const allowed = new File([], 'allowed.bin');
+  const oversized = new File([], 'oversized.bin');
+  Object.defineProperty(allowed, 'size', { value: limit });
+  Object.defineProperty(oversized, 'size', { value: limit + 1 });
+  app.engine.sendFiles([allowed, oversized]);
+  expect(app.records()).toHaveLength(1);
+  expect(app.records()[0]).toMatchObject({ name: 'allowed.bin', size: limit, status: 'sending' });
+  expect(JSON.parse(app.channel.sent[0] as string)).toMatchObject({ type: 'FILE_START', size: limit });
+  expect(app.errors).toEqual(['oversized.bin: 최대 파일 크기를 초과했습니다.']);
+  app.engine.cancel(app.records()[0].id);
+});
+it('allows a 200 MiB incoming file while preserving the 200 MiB total reservation limit', async () => {
+  const limit = 200 * 1024 * 1024;
+  const app = setup({ ...config, maxFileSize: limit, maxSessionBytes: limit });
+  const oversizedId = crypto.randomUUID();
+  const extraId = crypto.randomUUID();
+  app.channel.receive({ type: 'FILE_START', id: oversizedId, name: 'oversized.bin', size: limit + 1, mime: '' });
+  app.channel.receive({ type: 'FILE_START', id, name: 'allowed.bin', size: limit, mime: '' });
+  app.channel.receive({ type: 'FILE_START', id: extraId, name: 'extra.bin', size: 1, mime: '' });
+  await vi.waitFor(() => expect(app.records()).toHaveLength(3));
+  expect(app.records().map(item => item.status)).toEqual(['error', 'receiving', 'error']);
+  app.engine.cancel(id);
+  const retryId = crypto.randomUUID();
+  app.channel.receive({ type: 'FILE_START', id: retryId, name: 'retry.bin', size: limit, mime: '' });
+  await vi.waitFor(() => expect(app.records().at(-1)?.id).toBe(retryId));
+  expect(app.records().at(-1)?.status).toBe('receiving');
+  expect(app.channel.readyState).toBe('open');
+});
 it('stops a blocked sender when cancelled and marks interrupted text as failed', async () => {
   const app = setup(); app.channel.bufferedAmount = 2000000;
   app.engine.sendFiles([new File([new Uint8Array(50)], 'a')]);

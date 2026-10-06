@@ -10,6 +10,8 @@
 
 서비스 주소: **https://dropgo.up.railway.app**. 2026-10-06 최적화본 배포를 완료했으며 Chromium·Firefox에서 공개 QR 연결과 실제 텍스트·파일 전송을 검증했습니다. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 개선 내용과 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
 
+별도 도메인 구매 없이 검색으로 찾아오는 방식을 준비했습니다. 한국어 검색 정보, 사이트맵, 네이버 제출 방법과 실제 제출 상태는 [SEARCH.md](./SEARCH.md)를 참고하세요. 검색 결과 노출이나 순위가 보장되는 것은 아닙니다.
+
 Node.js **22.12 이상**(개발 검증: Node 24)을 설치한 뒤:
 
 ```sh
@@ -146,7 +148,7 @@ DataChannel은 reliable/ordered 모드이며 다음 메시지를 교환합니다
 | `HOST` | `0.0.0.0` | 서버 listen 주소 |
 | `PUBLIC_URL` | 현재 origin | QR 주소 및 허용 origin, 배포 시 HTTPS origin |
 | `ROOM_TTL` | `600000` | 2 Peer 미만 대기 Room 유효 시간(ms), Peer 퇴장 시 다시 시작 |
-| `MAX_FILE_SIZE` | `104857600` | 파일당 100MiB, 상한 1GiB |
+| `MAX_FILE_SIZE` | `209715200` | 파일당 200MiB, 상한 1GiB |
 | `MAX_SESSION_BYTES` | `209715200` | 보관 중 수신 파일과 진행 중 수신 예약 용량 합계 200MiB |
 | `STUN_URL` | `stun:stun.l.google.com:19302` | STUN URL, 빈 값이면 비활성 |
 | `TURN_URL` | 없음 | 선택 TURN URL, 여러 개는 쉼표 구분 |

@@ -8,10 +8,10 @@
 - 배포된 최적화본 `https://dropgo.up.railway.app`의 공개 HTTPS E2E: **Chromium·Firefox 2개 통과, 16.0초**. 실제 QR 해독, WSS, WebRTC 텍스트 및 72,000-byte 파일의 다운로드 일치를 검증했습니다.
 - `npm audit --json`: `source-map-js` 1.2.2 갱신 후 알려진 취약점 **0개**.
 - `npm run deploy:verify -- https://dropgo.up.railway.app`: **통과**. 로컬 JS/CSS의 해시·내용, Brotli/캐시 설정, healthcheck와 PUBLIC_URL을 확인했습니다. 이전 빌드일 때 코드 1로 종료했던 검사는 배포 전 기록이며, 배포 후 새 검사가 성공했습니다.
-- 배포 코드: `91aba3b8f5d5331b0917b7cd219000b0a5cb8bc6`. Railway 배포 ID: `9a5e86b0-5dc8-4836-a2f3-3e01db2a4479`. GitHub의 Railway 배포 성공 상태도 확인했습니다.
+- 기능 검증 기준 코드: `91aba3b8f5d5331b0917b7cd219000b0a5cb8bc6`. Railway 배포 ID: `9a5e86b0-5dc8-4836-a2f3-3e01db2a4479`. GitHub의 Railway 배포 성공 상태도 확인했습니다.
 - 공개 자산: `index-DlbgtMzG.js`, `index-DFBmzxZh.css`.
 - 공개 화면: 데스크톱 QR과 390px 모바일 연결·텍스트·다운로드 화면을 확인했고 눈에 띄는 가로 넘침은 없었습니다. 실제 스마트폰 검증은 아닙니다.
-- GitHub Source의 `main` 연결과 이번 배포는 확인했습니다. CLI는 여전히 `Unauthorized`이며 후속 푸시 자동 배포는 미검증입니다.
+- GitHub Source의 `main` 연결을 확인한 뒤 문서 커밋 `d783cd9ac2a996c5a4d9985856b193e290c14e80`을 푸시했습니다. 별도 사용자 조작 없이 배포가 시작돼 성공했으며 GitHub 상태가 `pending`에서 `success`로 바뀌었습니다. 자동 배포 ID는 `7121c779-8733-451e-977f-f3ad05ff2824`입니다. CLI의 `Unauthorized`는 별도의 도구 인증 제한으로 남아 있습니다.
 - 실제 iPhone/Android, 운영 TURN, 통신망 간 연결 및 100MiB 경계·장시간 전송은 미검증입니다.
 - [상세 개선·측정 기록](./OPTIMIZATION.md).
 
