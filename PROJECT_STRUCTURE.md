@@ -83,6 +83,7 @@ QuickDrop/
 ├─ .env.example               환경 변수 예시
 ├─ .gitignore / .dockerignore
 ├─ README.md                  사용/개발/운영 설명
+├─ PROJECT_OVERVIEW.md        전체 프로젝트 요약과 운영·검증 현황
 ├─ PROJECT_STRUCTURE.md       이 문서
 ├─ PROJECT_STATUS.md          진행 현황, 수정 이력, 남은 작업
 ├─ DEPLOYMENT.md              실제 운영 주소, 배포·검증·복구
@@ -102,6 +103,7 @@ QuickDrop/
 | `.tools/` | checksum 검증한 cloudflared 실행 파일 |
 | `.quickdrop/mobile.json` | 현재 임시 HTTPS 주소, 프로세스 식별자 |
 | `.quickdrop/mobile.log` | 개발 터널 실행 로그 |
+| `.quickdrop/search-submission.json` | 검색 수집 알림 응답 기록; 실제 검색 노출 확인과 별개 |
 | `artifacts/`, `test-results/` | 화면 이미지, trace 등 테스트 결과 |
 
 ## 4. 연결과 자료 이동

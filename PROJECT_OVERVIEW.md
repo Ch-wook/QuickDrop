@@ -1,0 +1,104 @@
+# QuickDrop 전체 프로젝트 정리
+
+정리일: **2026-10-06 (Asia/Seoul)**
+
+QuickDrop은 앱 설치와 로그인 없이 두 기기를 QR 또는 6자리 코드로 연결해 텍스트·링크·사진·파일을 양방향으로 보내는 웹 서비스입니다.
+
+- 서비스: **https://dropgo.up.railway.app**
+- GitHub: [Ch-wook/QuickDrop](https://github.com/Ch-wook/QuickDrop), `main`
+- 배포: Railway `quickdrop` / `production`, GitHub 푸시 자동 배포
+- 최신 기능 변경: `7272183` — 파일당 200MiB, 검색 노출 준비
+- 상세 운영 확인: [DEPLOYMENT.md](./DEPLOYMENT.md), [VALIDATION.md](./VALIDATION.md)
+
+## 사용 흐름
+
+1. PC에서 서비스 주소를 엽니다.
+2. 휴대폰 카메라로 PC 화면의 QR을 스캔합니다. 두 기기에서 사이트를 열고 6자리 코드로 연결할 수도 있습니다.
+3. 연결 완료 후 어느 기기에서든 텍스트를 보내거나 파일을 선택합니다.
+4. 받은 파일은 다운로드합니다. 연결 중에는 두 기기의 페이지를 열어둡니다.
+
+과거 휴대폰 접속 거부는 QR이 PC의 `localhost`를 가리키던 문제였습니다. 이제 공개 HTTPS 주소로 QR을 생성하며 사용자가 휴대폰 연결 성공을 알려왔습니다. 휴대폰 OS별 파일 저장·백그라운드 동작까지 확인한 것은 아닙니다.
+
+## 구현한 기능
+
+| 구분 | 구현 내용 |
+|---|---|
+| 연결 | 임시 Room, QR, 6자리 코드, 최대 두 기기, HTTPS/WSS |
+| 전송 | 텍스트·링크·이미지·일반 파일, 양방향 WebRTC DataChannel |
+| 편의 기능 | 다중 파일 선택, 드래그·드롭, 이미지·파일 붙여넣기, 미리보기, 다운로드 |
+| 상태 관리 | 진행률, 수신 확인, 취소, 제한·오류 안내, 기록 비우기 |
+| 화면 | 한국어 반응형 UI, 키보드 조작, 모바일 레이아웃 |
+| 운영 | Docker 빌드, healthcheck, GitHub 자동 배포, 정적 파일 압축·캐시 |
+| 검색 | 한국어 제목·설명, canonical, Open Graph, robots.txt, 홈페이지 사이트맵, 네이버 IndexNow 제출 명령 |
+
+## 구성과 데이터 흐름
+
+```mermaid
+flowchart LR
+  A[PC / 휴대폰 A] <-->|연결 신호: WSS| S[Railway Node.js 서버]
+  S <-->|연결 신호: WSS| B[PC / 휴대폰 B]
+  A <-->|텍스트·파일: WebRTC| B
+```
+
+서버는 Room과 연결 신호를 관리하고 파일·텍스트 본문은 WebRTC로 전송합니다. 별도 회원 DB나 파일 저장소는 없습니다. Room과 전송 기록은 메모리 상태이며 서버 재시작·페이지 새로고침 후 복구되지 않습니다.
+
+| 위치 | 역할 |
+|---|---|
+| `client/` | React 화면, WebRTC 연결, 전송 큐·진행률·기록 |
+| `server/` | Express API, WebSocket, Room, 요청 제한, 운영 정적 파일 |
+| `shared/` | 공통 메시지·청크 규격과 URL 검증 |
+| `public/`, `index.html` | favicon, 검색 메타데이터·사이트맵·소유 증명 파일 |
+| `scripts/` | 모바일 개발 터널, 압축, 배포 검증, 검색 수집 알림 |
+| `tests/` | 단위·통합 검사와 실제 브라우저 전송 검사 |
+| `Dockerfile`, `railway.json`, `compose.yaml` | 빌드·실행·배포 구성 |
+
+기술 구성: React 19, TypeScript, Vite, Node.js 24, Express 5, ws, Zod, Vitest, Playwright. 파일별 역할과 API는 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)에 정리했습니다.
+
+## 용량과 보호 장치
+
+- 파일당 **200MiB = 209,715,200바이트**. 화면에서는 기존 단위 표기에 맞춰 `200.0 MB`로 표시합니다.
+- 한 기기의 수신 파일 보관·진행 중 예약 용량 합계는 **200MiB**를 유지합니다. 큰 파일을 추가로 받기 전에는 기존 파일을 저장하고 기록을 비워야 할 수 있습니다.
+- 파일 큐 20개, 기록 300개, 활성 수신 파일 2개, Room 최대 두 기기.
+- 파일을 최대 256KiB씩 읽고 16KiB 청크로 전송하며 송신 버퍼가 차면 기다립니다.
+- 같은 origin 확인, 메시지 형식·크기 검증, IP별 요청 제한, 만료 Room 정리와 연결 heartbeat를 적용했습니다.
+- QR·연결 코드를 아는 사람이 참가할 수 있습니다. 개인 참가 URL은 검색 제외 헤더를 반환하고 사이트맵·검색 제출에서 제외합니다.
+
+## 최적화 및 검증
+
+QR 라이브러리 지연 로딩으로 초기 JS gzip 예상 크기를 115.98kB에서 약 106.79kB로 줄였습니다. 파일 읽기를 묶고 중간 복사를 줄였으며, Brotli/gzip 사전 압축과 해시 자산 캐시를 적용했습니다. 상세 수치와 측정 범위는 [OPTIMIZATION.md](./OPTIMIZATION.md)를 참고하세요.
+
+현재 변경의 단위·통합 검사 **86개**와 운영 빌드는 통과했습니다. 운영 서버의 200MiB 제한·검색 설정·자산 일치를 확인했고 공개 Chromium·Firefox QR/전송 E2E **2개**가 통과했습니다. 200MiB 경계 허용·1바이트 초과 거절·수신 예약 해제는 전체 파일을 할당하지 않는 제한 검사이며 실제 휴대폰의 200MiB 전송 완료를 의미하지 않습니다. 상세 근거는 [VALIDATION.md](./VALIDATION.md)에 기록합니다.
+
+## 배포와 검색 운영
+
+Railway 서비스는 한 개의 Node.js 프로세스로 프런트엔드·API·WebSocket을 제공합니다. Room이 메모리에 있으므로 replica는 1개로 유지합니다. `PUBLIC_URL`과 실제 HTTPS 주소가 일치해야 합니다.
+
+```powershell
+npm test
+npm run build
+$env:EXPECTED_MAX_FILE_SIZE = '209715200'
+npm run deploy:verify -- https://dropgo.up.railway.app
+Remove-Item Env:EXPECTED_MAX_FILE_SIZE
+```
+
+검색 접근은 추가 비용 없이 기존 주소로 준비했고 네이버 IndexNow의 **HTTP 200 접수 응답**을 확인했습니다. 수집 알림 접수와 실제 검색 결과 노출은 별개입니다. Google 계정 소유권 확인·수동 색인 요청은 별도이며 검색 시점·순위는 보장하지 않습니다. 후속 절차는 [SEARCH.md](./SEARCH.md)에 있습니다. 도메인 구매는 하지 않았습니다.
+
+## 남은 확인과 확장 범위
+
+- 짧은 Railway 주소의 사용 가능 여부 확인과 변경. 무료 주소의 `up.railway.app`은 고정이며 `1.railway.app`을 할당할 수는 없습니다. `1.up.railway.app`의 허용 여부·중복 여부는 아직 확인되지 않았고, CLI 인증 제한으로 현재 도메인은 변경하지 않았습니다. [Railway 도메인 규격](https://docs.railway.com/networking/domains/working-with-domains)
+- 실제 iPhone/Android에서 파일 저장, 200MiB 전송, 장시간·백그라운드 동작 확인.
+- 서로 다른 통신망의 연결 성공률 개선을 위한 운영 TURN 서버 연결과 인증 만료 검증. 현재 공개 설정에는 STUN만 있어 일부 NAT/방화벽에서 연결이 실패할 수 있습니다.
+- 검색엔진의 실제 수집·노출 확인, 선택적으로 Google Search Console 소유권 확인.
+- 로컬 Docker Compose 검사와 운영 모니터링 설정.
+
+PWA, 기기 기억, 세 대 이상 연결, 오프라인 보관, 푸시 알림, 전송 재개는 이번 MVP에 포함하지 않았습니다.
+
+## 문서 안내
+
+- [README.md](./README.md): 서비스와 개발 실행 방법
+- [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md): 전체 파일·API·프로토콜 구성
+- [PROJECT_STATUS.md](./PROJECT_STATUS.md): 구현·수정 이력과 후속 작업
+- [VALIDATION.md](./VALIDATION.md): 검사 근거와 미검증 범위
+- [DEPLOYMENT.md](./DEPLOYMENT.md): 배포 식별자·설정·복구 절차
+- [OPTIMIZATION.md](./OPTIMIZATION.md): 성능 개선 내역과 측정
+- [SEARCH.md](./SEARCH.md): 검색 노출 준비·요청 결과

@@ -1,5 +1,15 @@
 # QuickDrop 검증 기록
 
+## 2026-10-06 파일당 200MiB 및 검색 접근 변경
+
+- 기능 변경 코드 `7272183`, Railway 배포 `26dfe327-635a-45fe-8dce-17b2837f2f0a`.
+- `npm test`: **9개 파일, 86개 통과**. 200MiB 허용·1바이트 초과 거절·수신 예약 해제와 참가 URL 검색 제외 검사를 추가했습니다.
+- `npm run build`: 통과. 공개 JS는 `index-DKbB_D6K.js`입니다.
+- `EXPECTED_MAX_FILE_SIZE=209715200`을 지정한 `deploy:verify`: **통과**. 실제 API 제한, 로컬/공개 자산 일치, Brotli/캐시, 검색 제목·canonical·robots·사이트맵, 참가 URL의 noindex를 확인했습니다.
+- 새 배포에서 공개 Chromium·Firefox E2E **2개 통과, 19.7초**. QR 해독, WSS, WebRTC 텍스트, 72,000-byte 파일 다운로드 내용 일치를 확인했습니다.
+- 네이버 IndexNow 홈페이지 알림: 공식 단일 URL GET 요청 **HTTP 200**. 요청 접수만 확인했으며 실제 검색 결과 노출은 미확인입니다.
+- 사용자에게서 휴대폰 연결 성공 보고를 받았습니다. OS별 파일 저장·200MiB 전체 파일 전송·장시간 동작·운영 TURN은 미검증입니다.
+
 ## 2026-10-06 최적화 및 운영 배포 검증
 
 - `npm test`: **9개 파일, 83개 통과**.

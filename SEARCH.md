@@ -10,11 +10,11 @@
 - `public/robots.txt`는 홈페이지 수집을 허용하고 `/api/`, `/ws`를 제외합니다. `/join/`은 robots.txt로 차단하지 않아 검색로봇이 HTTP `X-Robots-Tag: noindex, nofollow, noarchive`를 읽을 수 있습니다.
 - 임시 참가 링크와 API/WS에는 위 검색 제외 응답 헤더를 적용했습니다. 검색 제외는 접근 인증을 대신하지 않으며 QR/연결 코드를 아는 사람의 참가 방식은 그대로입니다.
 
-검색용 변경은 코드에 반영됐으며 운영 반영과 네이버 제출 결과는 배포 후 확인합니다. 현재 이 문서에 기록된 실제 제출 결과는 없습니다. 색인 등록, 노출 시점이나 검색 순위를 보장하지 않습니다. 네이버도 IndexNow의 목적을 변경 알림으로 설명하며 색인을 보장하지 않는다고 안내합니다. [네이버 공식 소개](https://searchadvisor.naver.com/guide/indexnow-about)
+검색용 변경의 운영 반영을 확인했습니다. **2026-10-06 네이버 IndexNow에 홈페이지를 알렸고 HTTP 200 응답을 받았습니다.** 이는 요청 접수 성공이며, 실제 검색 결과 노출을 확인한 것은 아닙니다. 색인 등록, 노출 시점이나 검색 순위를 보장하지 않습니다. 네이버도 IndexNow의 목적을 변경 알림으로 설명하며 색인을 보장하지 않는다고 안내합니다. [네이버 공식 소개](https://searchadvisor.naver.com/guide/indexnow-about)
 
 ## 네이버에 홈페이지 변경 알리기
 
-네이버는 IndexNow를 지원합니다. `scripts/search-submit.mjs`는 배포된 소유 증명 파일의 내용과 홈페이지 접근 가능 여부를 확인한 뒤 홈페이지 URL 한 개만 네이버에 POST합니다.
+네이버는 IndexNow를 지원합니다. `scripts/search-submit.mjs`는 배포된 소유 증명 파일의 내용과 홈페이지 접근 가능 여부를 확인한 뒤 공식 단일 URL GET 방식으로 홈페이지 한 개를 알립니다. 첫 POST 요청은 HTTP 422였고, 같은 홈페이지와 키를 사용한 공식 단일 URL GET 요청이 HTTP 200으로 성공하여 이 방식으로 정리했습니다.
 
 ```sh
 npm run search:submit -- https://dropgo.up.railway.app
