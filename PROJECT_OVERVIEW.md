@@ -5,6 +5,7 @@
 QuickDrop은 앱 설치와 로그인 없이 두 기기를 QR 또는 6자리 코드로 연결해 텍스트·링크·사진·파일을 양방향으로 보내는 웹 서비스입니다.
 
 - 서비스: **https://dropgo.up.railway.app**
+- 짧은 접속 링크: **[da.gd/qd20](https://da.gd/qd20)**. 주소창에 직접 입력하고 신규 링크 안내가 나오면 홈페이지 주소를 누릅니다. [사용 방법](./README.md#짧은-주소로-바로-사용하기), [등록 확인](./SHORT_LINK.md)
 - GitHub: [Ch-wook/QuickDrop](https://github.com/Ch-wook/QuickDrop), `main`
 - 배포: Railway `quickdrop` / `production`, GitHub 푸시 자동 배포
 - 최신 기능 변경: 이전 상대별 대화방 목록·이름 저장·연결 전 기록 열람, 다른 상대와 연결 중에도 과거 기록 보존. [대화방 구성](./HISTORY_ROOMS.md), [연결 복구](./RELIABILITY.md)
@@ -24,7 +25,7 @@ QuickDrop은 앱 설치와 로그인 없이 두 기기를 QR 또는 6자리 코�
 | 수신 보관·예약 합계 | 운영 API에서 209,715,200바이트(200MiB) 확인 |
 | 구현·배포·GitHub 연동 | 완료; `main` 푸시 자동 배포 확인 |
 | 검색 접근 | 검색용 설정 배포 및 네이버 수집 알림 접수 완료; 실제 노출은 미확인 |
-| 짧은 주소 변경 | 현재 주소 유지; Railway 설정 권한과 사용 가능 이름 확인 필요 |
+| 짧은 접속 | `da.gd/qd20` 실제 등록·홈페이지 연결 확인; 신규 링크 안내에서 목적지 클릭. Railway 도메인은 유지 |
 
 ## 사용 흐름
 
@@ -133,3 +134,4 @@ Remove-Item Env:EXPECTED_MAX_FILE_SIZE
 - [SEARCH.md](./SEARCH.md): 검색 노출 준비·요청 결과
 - [RELIABILITY.md](./RELIABILITY.md): 연결 자동 복구·PC끼리 사용·기기별 기록
 - [HISTORY_ROOMS.md](./HISTORY_ROOMS.md): 이전 상대별 대화방, 방 이름과 보관 범위
+- [SHORT_LINK.md](./SHORT_LINK.md): 짧은 접속 링크 등록·목적지 확인과 사용 방법
