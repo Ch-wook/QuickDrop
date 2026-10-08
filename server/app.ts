@@ -12,7 +12,12 @@ export function createApp(config: Config) {
   const server = createServer(app);
   const rooms = new Rooms(config.roomTtl);
   const wss = new WebSocketServer({ noServer: true, maxPayload: 40000, perMessageDeflate: false });
-  const peers = new Map<string, { ws: WebSocket; roomId?: string; alive: boolean }>();
+  type Peer = { ws: WebSocket; roomId?: string; alive: boolean; deviceId?: string; resumeToken?: string; graceTimer?: ReturnType<typeof setTimeout> };
+  const peers = new Map<string, Peer>();
+  const resumes = new Map<string, string>();
+  const negotiations = new Map<string, { id: string; restartedAt: number }>();
+  const resumeGrace = 120000;
+  let shuttingDown = false;
   const createLimit = new RateLimiter(30, 60000);
   const configLimit = new RateLimiter(120, 60000);
   const connectLimit = new RateLimiter(40, 60000);
@@ -64,6 +69,26 @@ export function createApp(config: Config) {
     if (ws.bufferedAmount > 256000) { ws.terminate(); return; }
     ws.send(JSON.stringify(message));
   };
+  const leave = (peerId: string) => {
+    const peer = peers.get(peerId);
+    if (!peer) return;
+    clearTimeout(peer.graceTimer);
+    peers.delete(peerId);
+    if (peer.resumeToken) resumes.delete(peer.resumeToken);
+    if (!peer.roomId) return;
+    rooms.leave(peer.roomId, peerId);
+    negotiations.delete(peer.roomId);
+    const room = rooms.rooms.get(peer.roomId);
+    if (room) for (const id of room.peers) { const other = peers.get(id); if (other) send(other.ws, { type: 'PEER_LEFT' }); }
+  };
+  const notifyPair = (roomId: string, type: 'PEER_JOINED' | 'PEER_RESUMED') => {
+    const room = rooms.rooms.get(roomId);
+    if (!room || room.peers.size !== 2) return;
+    const ids = [...room.peers];
+    if (ids.some(id => peers.get(id)?.ws.readyState !== WebSocket.OPEN)) return;
+    if (type === 'PEER_JOINED' || !negotiations.has(roomId)) negotiations.set(roomId, { id: randomUUID(), restartedAt: Date.now() });
+    for (const id of ids) send(peers.get(id)!.ws, { type, initiator: id === ids[0], peerDeviceId: peers.get(ids.find(other => other !== id)!)?.deviceId, negotiationId: negotiations.get(roomId)!.id });
+  };
   server.on('upgrade', (req, socket, head) => {
     if (req.url !== '/ws') {
       // Development Vite owns its HMR upgrade. Production must not leave an
@@ -80,13 +105,14 @@ export function createApp(config: Config) {
     wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, ip));
   });
   wss.on('connection', (ws: WebSocket, ip: string) => {
-    const peerId = randomUUID();
-    const peer = { ws, roomId: undefined as string | undefined, alive: true };
+    let peerId: string = randomUUID();
+    let peer: Peer = { ws, alive: true };
     peers.set(peerId, peer);
     const joinTimer = setTimeout(() => { if (!peer.roomId) ws.close(1008, 'Join timeout'); }, 10000);
-    ws.on('pong', () => { peer.alive = true; });
+    ws.on('pong', () => { if (peer.ws === ws) peer.alive = true; });
     ws.on('error', () => ws.terminate());
     ws.on('message', (raw, binary) => {
+      if (peer.ws !== ws || peers.get(peerId) !== peer) return;
       try {
         if (binary || !signalLimit.allow(peerId)) throw new Error('허용되지 않거나 너무 많은 연결 요청입니다.');
         const result = signalSchema.safeParse(JSON.parse(raw.toString()));
@@ -94,19 +120,41 @@ export function createApp(config: Config) {
         const message = result.data;
         if (message.type === 'JOIN') {
           if (peer.roomId) throw new Error('이미 세션에 참가했습니다.');
-          if (!joinLimit.allow(ip)) throw new Error('연결 시도가 너무 많습니다. 1분 후 다시 시도하세요.');
-          const room = rooms.join(peerId, message);
-          peer.roomId = room.roomId;
-          clearTimeout(joinTimer);
-          send(ws, { type: 'JOINED', peerId, roomId: room.roomId, code: room.code, expiresAt: room.expiresAt });
-          if (room.peers.size === 2) {
-            const ids = [...room.peers];
-            for (const id of ids) send(peers.get(id)!.ws, { type: 'PEER_JOINED', initiator: id === ids[0] });
+          let resumed = false;
+          if (message.resumeToken) {
+            const previousId = resumes.get(message.resumeToken);
+            const previous = previousId ? peers.get(previousId) : undefined;
+            if (!previous || previous.roomId !== message.roomId || previous.deviceId !== message.deviceId || !rooms.rooms.get(previous.roomId!)?.peers.has(previousId!)) throw new Error('자동 복구 시간이 지났습니다. 새 연결을 시작하세요.');
+            peers.delete(peerId);
+            peerId = previousId!;
+            peer = previous;
+            clearTimeout(peer.graceTimer); peer.graceTimer = undefined;
+            const oldSocket = peer.ws; peer.ws = ws; peer.alive = true;
+            if (oldSocket !== ws) oldSocket.close(1000, 'Resumed elsewhere');
+            resumed = true;
+          } else {
+            if (!joinLimit.allow(ip)) throw new Error('연결 시도가 너무 많습니다. 1분 후 다시 시도하세요.');
+            const joined = rooms.join(peerId, message);
+            peer.roomId = joined.roomId; peer.deviceId = message.deviceId;
+            if (message.deviceId) { peer.resumeToken = randomUUID(); resumes.set(peer.resumeToken, peerId); }
           }
+          const room = rooms.rooms.get(peer.roomId!)!;
+          clearTimeout(joinTimer);
+          send(ws, { type: 'JOINED', peerId, roomId: room.roomId, code: room.code, expiresAt: room.expiresAt, resumeToken: peer.resumeToken, resumed });
+          notifyPair(room.roomId, resumed ? 'PEER_RESUMED' : 'PEER_JOINED');
+        } else if (message.type === 'LEAVE') {
+          leave(peerId); ws.close(1000, 'Left');
         } else {
           const room = rooms.rooms.get(peer.roomId || '');
           if (!room || room.peers.size !== 2) throw new Error('상대 기기가 연결되어 있지 않습니다.');
-          for (const id of room.peers) if (id !== peerId) send(peers.get(id)!.ws, message);
+          if (message.type === 'RECONNECT') {
+            // Both ends may notice a failed channel at once. Assign one offerer
+            // and one fresh epoch, rather than permitting simultaneous offers.
+            if (Date.now() - (negotiations.get(room.roomId)?.restartedAt || 0) >= 1000) notifyPair(room.roomId, 'PEER_JOINED');
+          } else {
+            if (message.negotiationId && message.negotiationId !== negotiations.get(room.roomId)?.id) return;
+            for (const id of room.peers) if (id !== peerId) { const other = peers.get(id); if (other) send(other.ws, message); }
+          }
         }
       } catch (error) {
         send(ws, { type: 'ERROR', message: error instanceof Error ? error.message : '연결 요청을 처리할 수 없습니다.' });
@@ -115,22 +163,24 @@ export function createApp(config: Config) {
     });
     ws.on('close', () => {
       clearTimeout(joinTimer);
-      peers.delete(peerId);
-      if (!peer.roomId) return;
-      rooms.leave(peer.roomId, peerId);
-      const room = rooms.rooms.get(peer.roomId);
-      if (room) for (const id of room.peers) send(peers.get(id)!.ws, { type: 'PEER_LEFT' });
+      if (peer.ws !== ws || peers.get(peerId) !== peer) return;
+      if (shuttingDown || !peer.roomId || !peer.resumeToken) { leave(peerId); return; }
+      // A signaling interruption must not tear down a healthy direct channel.
+      // Reserve the slot for its secret token while the browser reconnects.
+      peer.graceTimer = setTimeout(() => leave(peerId), resumeGrace);
+      peer.graceTimer.unref();
     });
   });
   const sweepTimer = setInterval(() => {
     for (const id of rooms.sweep()) {
       const peer = peers.get(id);
-      if (peer) { send(peer.ws, { type: 'ROOM_EXPIRED' }); peer.ws.close(1000, 'Room expired'); }
+      if (peer) { send(peer.ws, { type: 'ROOM_EXPIRED' }); peer.ws.close(1000, 'Room expired'); leave(id); }
     }
     for (const limit of [createLimit, configLimit, connectLimit, joinLimit, signalLimit]) limit.sweep();
   }, Math.min(config.roomTtl, 5000));
   const heartbeat = setInterval(() => {
     for (const peer of peers.values()) {
+      if (peer.ws.readyState !== WebSocket.OPEN) continue;
       if (!peer.alive) { peer.ws.terminate(); continue; }
       peer.alive = false;
       peer.ws.ping();
@@ -143,7 +193,8 @@ export function createApp(config: Config) {
     close: () => {
       if (closing) return closing;
       clearInterval(sweepTimer); clearInterval(heartbeat);
-      for (const peer of peers.values()) peer.ws.terminate();
+      shuttingDown = true;
+      for (const peer of peers.values()) { clearTimeout(peer.graceTimer); peer.ws.terminate(); }
       wss.close();
       closing = new Promise<void>(resolve => {
         const deadline = setTimeout(() => server.closeAllConnections(), 5000);

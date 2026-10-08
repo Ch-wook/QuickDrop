@@ -11,7 +11,7 @@ QuickDrop은 웹사이트와 QR 또는 연결 코드로 **동등한 두 기기**
 | 영역 | 기술 | 역할 |
 |---|---|---|
 | 언어 | TypeScript | 프런트/서버/프로토콜 타입 공유 |
-| 화면 | React 19, CSS | 한국어 반응형 UI, 세션 내 전송 기록 |
+| 화면 | React 19, CSS | 한국어 반응형 UI, 기기 조합별 전송 기록 |
 | 프런트 빌드 | Vite 7 | 개발 화면, production 정적 파일 생성 |
 | 서버 | Node.js, Express 5 | Room API, 설정 API, 정적 파일 제공 |
 | 연결 중개 | ws | WebSocket / secure WebSocket signaling |
@@ -31,6 +31,7 @@ QuickDrop/
 │  ├─ App.tsx                  기기 연결, QR, 코드 입력, 전송 UI
 │  ├─ peer.ts                  WebSocket 및 RTCPeerConnection 수명 관리
 │  ├─ transfers.ts             파일 대기열, 청크, ACK, 취소, 수신 메모리
+│  ├─ history.ts               기기 ID, IndexedDB 기록·Blob, 보관 한도
 │  ├─ TransferCard.tsx         텍스트/링크/이미지/파일 기록 카드
 │  ├─ icons.tsx                프로젝트 내부 SVG 아이콘
 │  └─ styles.css               반응형 스타일과 상태별 표현
@@ -137,7 +138,7 @@ sequenceDiagram
 
 첫 참가자가 offer를 만드는 것은 연결 협상 역할일 뿐입니다. 두 Peer 모두 동일하게 송신·수신합니다. PC/휴대폰에 따른 역할 분기는 없습니다.
 
-서버에 저장하는 정보는 메모리의 Room ID, 코드, 만료 시각, Peer/WebSocket뿐입니다. 자료 업로드 API나 파일 저장소는 없습니다. TURN을 설정한 경우 일부 전송은 암호화된 상태로 TURN을 경유할 수 있습니다.
+서버 메모리는 Room ID, 코드, 만료 시각, Peer/WebSocket, 기기 구분 ID, 비밀 resume token과 협상 ID를 관리합니다. 텍스트·파일 내용은 보관하지 않습니다. 자료 업로드 API나 파일 저장소는 없습니다. TURN을 설정한 경우 일부 전송은 암호화된 상태로 TURN을 경유할 수 있습니다.
 
 ## 5. HTTP 및 WebSocket 인터페이스
 
@@ -152,7 +153,7 @@ sequenceDiagram
 
 `PUBLIC_URL`이 설정되어 있으면 로컬/다른 주소로 연 페이지를 정식 HTTPS 주소로 이동합니다. Room 참가 경로는 유지합니다. API는 이 이동 처리에서 제외합니다.
 
-WS 메시지: `JOIN`, `JOINED`, `PEER_JOINED`, `OFFER`, `ANSWER`, `ICE_CANDIDATE`, `PEER_LEFT`, `ROOM_EXPIRED`, `ERROR`.
+WS 메시지: `JOIN`, `JOINED`, `PEER_JOINED`, `PEER_RESUMED`, `LEAVE`, `RECONNECT`, `OFFER`, `ANSWER`, `ICE_CANDIDATE`, `PEER_LEFT`, `ROOM_EXPIRED`, `ERROR`. JOIN은 기기 ID와 비밀 resume token을 지원하며 재협상 신호는 negotiation ID로 이전 신호와 구분합니다. 정상 전송 유지·120초 자리 유예·기록 보관은 [RELIABILITY.md](./RELIABILITY.md)에 정리했습니다.
 
 ## 6. 파일 전송 구성
 
@@ -163,7 +164,7 @@ WS 메시지: `JOIN`, `JOINED`, `PEER_JOINED`, `OFFER`, `ANSWER`, `ICE_CANDIDATE
 - 수신 확인 ACK가 도착해야 송신 측에서도 완료 상태로 바뀝니다.
 - 전송 상태: `sending → confirming → complete`, `receiving → complete`, 오류/취소 시 `error` 또는 `cancelled`.
 - 파일당 기본 200MiB(209,715,200 bytes), 수신 보관 합계 200MiB, 기록 300개, 대기열 20개 제한. 보관한 수신 파일은 공간을 계속 사용하므로 저장 후 기록을 비우면 수신 용량을 확보할 수 있습니다.
-- 기록 비우기/새 세션/종료 시 Blob URL과 수신 메모리를 해제합니다.
+- 세션 종료 시 Blob URL을 해제하며, 기록과 받은 Blob은 IndexedDB에 남아 같은 상대와 재연결하면 복원됩니다. 기록 비우기는 현재 상대의 완료·실패·취소 기록과 보관 파일을 삭제합니다.
 - JPEG/PNG/WebP만 이미지로 preview하며 다른 파일은 사용자 클릭으로 다운로드합니다.
 
 ## 7. 휴대폰 QR 접속 거부 원인과 수정
@@ -262,9 +263,9 @@ Remove-Item Env:E2E_BASE_URL
 - 192-bit Room ID, 별도 owner token, 6자리 fallback 코드, 2 Peer 제한과 TTL.
 - XSS escaping, HTTP(S) URL만 링크 활성화, 안전한 파일명, 자동 파일 실행 없음.
 - QR/코드를 아는 사람은 참가할 수 있습니다. 별도 사용자 인증은 없습니다.
-- 서버 재시작, 새로고침, 새 연결 시 복구하지 않습니다.
+- 서버 재시작 후 Room 복구와 전송 중 청크 재개는 지원하지 않습니다. 기기 조합별 기록·받은 파일과 일시적인 통신 단절은 복구합니다.
 - 모바일 백그라운드나 NAT/방화벽 환경에서는 전송 실패 가능성이 있습니다.
-- 계정·기기 기억·PWA·3대 이상·오프라인 보관·push·전송 resume는 미구현입니다.
+- 계정·신뢰 기기 자동 참가·PWA·3대 이상·오프라인 전송·push·전송 중 청크 재개는 미구현입니다. 기기 조합별 기록은 브라우저 IndexedDB에 보관합니다.
 - 향후 우선순위는 실제 iPhone/Android/통신망 QA, 운영 TURN 연결과 인증 만료 검증, 대용량 스트리밍/전송 재개입니다.
 
 ## 12. 참고

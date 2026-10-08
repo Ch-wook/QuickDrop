@@ -104,6 +104,9 @@ test('real WebRTC: ping/pong, links, images, binary files, paste/drop and peer d
 
     const c = await browser.newPage(); await c.goto(joinUrl!);
     await expect(c.getByRole('alert')).toContainText('이미 두 기기가 연결되어 있습니다.'); await c.close();
+    // Explicit departure releases the slot immediately. An unexpected browser
+    // shutdown now reserves it briefly for authenticated automatic recovery.
+    await b.getByRole('button', { name: '새 연결 시작' }).click();
     await bContext.close();
     await expect(a.getByText('상대 기기가 나갔습니다.', { exact: false })).toBeVisible();
     const replacement = await browser.newPage();

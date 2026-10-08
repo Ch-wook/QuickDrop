@@ -1,5 +1,18 @@
 # QuickDrop 검증 기록
 
+## 2026-10-09 연결 복구·PC 간 전송·기기별 기록
+
+- `npm test`: **9개 파일, 92개 통과**. 정상 DataChannel 유지와 resume token 확인, 오래된 협상 신호 차단, 무응답 복구의 재시도 상한, 만료된 Room의 재접속 상태 정리를 검사했습니다.
+- `npm run build`: TypeScript, 프런트·서버 및 Brotli/gzip 압축 성공. 새 초기 JS는 `index-ikTvQC87.js`입니다.
+- 운영 빌드 로컬 Playwright: **14개 통과/7개 skip, 55.9초**. Chromium·Firefox 양방향 전송, 두 데스크톱 프로필의 파일 선택 이벤트·blur/focus 복귀, 신호 단절 중 전송 유지, 채널 강제 종료 후 자동 재협상, 새 Room·새로고침 후 기록과 받은 파일 복원 및 바이트 일치를 확인했습니다.
+- 다른 상대의 기록 분리, 삭제 후 재연결해도 기록이 돌아오지 않는 동작을 검사했습니다. IndexedDB 차단과 Blob 저장 quota 오류를 주입해 저장 장애가 전송을 막지 않고 안내·메타데이터 보관으로 동작하는지 확인했습니다.
+- 7개 skip: 교차 엔진 중복 2개, Windows WebKit의 WebRTC 미지원 5개입니다. WebKit의 화면·오류 안내 검사는 통과했습니다.
+- 브라우저 엔진별 로컬 서버를 3100/3101/3102 포트로 분리했습니다. 확장된 E2E가 한 IP의 WebSocket 요청 한도를 공유하던 문제를 해결하며 운영 rate limit은 그대로 검사합니다.
+- 공개 `/api/health`, `PUBLIC_URL`, 파일당·수신 합계 200MiB 설정 유지도 확인했습니다. 수정본의 공개 배포와 공개 E2E는 아래 기록을 추가해 확정합니다.
+- 두 물리 PC, 실제 iPhone/Android 파일 선택 UI, OS가 장시간 정지시킨 페이지, 별도 통신망/TURN의 검증을 대체하지 않습니다.
+
+동작과 보관 범위는 [RELIABILITY.md](./RELIABILITY.md)에 있습니다.
+
 ## 2026-10-07 운영 상태 재확인
 
 - 공개 주소 `https://dropgo.up.railway.app/api/health`: `ok: true`.

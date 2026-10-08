@@ -62,14 +62,16 @@ production 빌드 후 공식 cloudflared를 SHA-256 검증하여 준비하고, �
 
 ## 구현한 기능
 
+2026-10-09: 정상 전송 연결을 유지하는 신호 서버 재접속, 양쪽 채널 자동 재협상, PC끼리 연결 검증, 같은 기기 조합의 기록·받은 파일 복원을 추가했습니다. 저장 방식·삭제·백그라운드 제한은 [RELIABILITY.md](./RELIABILITY.md)에 정리했습니다.
+
 - 임시 Room 자동 생성, QR, 6자리 코드 fallback, 최대 2 Peer
 - 참가 순서로 offer 생성자를 결정하는 WebRTC 연결
 - TEXT/LINK 자동 판별, 텍스트 복사, HTTP(S) 링크 새 탭 열기
 - 파일 선택, 다중 파일 대기열, 드래그 앤 드롭, 클립보드 이미지/파일 붙여넣기
 - JPEG/PNG/WebP 미리보기와 모든 파일 형식의 Blob 다운로드
 - 양방향 파일 청크 전송, 양쪽 진행률, 수신 확인 ACK, 취소, 오류/타임아웃 처리
-- 브라우저 메모리에만 있는 세션 기록, 기록 비우기와 Blob URL 해제
-- 대기 Room TTL, 마지막 Peer 퇴장 시 삭제, WebSocket heartbeat
+- 기기 조합별 IndexedDB 기록·받은 파일 복원, 기록 비우기와 Blob URL 해제
+- 대기 Room TTL, 명시적 퇴장, 신호 단절 후 120초 재접속 유예, WebSocket heartbeat
 - 반응형 한국어 UI, 버튼/입력 label, 키보드 조작, 상태 안내, dialog focus 복귀
 - localhost/HTTP QR 방지, 휴대폰용 임시 HTTPS 실행, PUBLIC_URL canonical redirect
 
@@ -82,7 +84,7 @@ production 빌드 후 공식 cloudflared를 SHA-256 검증하여 준비하고, �
 - **네이티브 WebRTC RTCDataChannel**: 양방향 암호화된 실시간 데이터 전송
 - **Zod**: 클라이언트/서버 공통 메시지 타입과 런타임 검증
 - **Vitest + Playwright**: 단위·통합 테스트와 실제 브라우저 E2E
-- DB, 계정 시스템, 클라우드 스토리지, 별도 상태관리 라이브러리 없음
+- 서버 DB, 계정 시스템, 클라우드 스토리지 없음; 기록은 브라우저 IndexedDB에 저장
 
 ```mermaid
 flowchart LR
@@ -105,6 +107,7 @@ client/
   TransferCard.tsx     텍스트·파일·이미지·진행률 UI
   peer.ts             WebSocket signaling, WebRTC lifecycle
   transfers.ts        ACK, 파일 큐, backpressure, 취소/메모리 관리
+  history.ts          기기 ID, IndexedDB 기록·파일 보관 한도
   icons.tsx           SVG 아이콘
   styles.css          데스크톱·모바일 스타일
 server/
@@ -136,7 +139,7 @@ DataChannel은 reliable/ordered 모드이며 다음 메시지를 교환합니다
 
 파일은 최대 **256KiB**씩 묶어 읽고, 전송 payload는 **16KiB** 청크로 나눕니다. 각 청크의 40-byte 헤더를 포함해 브라우저 간 메시지 크기 차이를 보수적으로 처리합니다. `bufferedAmount`가 1MiB를 넘으면 기다리고 `bufferedamountlow` 이벤트와 종료/타임아웃을 확인합니다. 수신자는 순서·총 크기를 검사하고 완성된 Blob만 다운로드 가능하게 합니다. DataChannel의 암호화·무결성·reliable transport를 사용하며 별도 애플리케이션 파일 해시는 보내지 않습니다.
 
-파일별/누적 수신 용량, 대기열 20개, 기록 300개, 활성 수신 파일 2개 제한으로 메모리 사용을 제한합니다. 완료된 수신 Blob은 기록을 비우거나 세션을 종료하면 해제됩니다. 전송 중 기록 비우기는 완료/실패/취소 기록만 지웁니다. 타임아웃은 60초이며 전송 재개는 지원하지 않습니다.
+파일별/누적 수신 용량, 대기열 20개, 기록 300개, 활성 수신 파일 2개 제한으로 메모리 사용을 제한합니다. 완료된 수신 Blob은 브라우저 IndexedDB에도 보관되며 같은 상대와 재연결하면 복원됩니다. 최근 10개 기기 조합, 조합당 300개 기록, 파일 합계 200MiB를 보관합니다. 세션 종료는 Blob URL을 해제하고 기록 비우기는 현재 상대의 보관 자료도 삭제합니다. 전송 중 기록 비우기는 완료/실패/취소 기록만 지웁니다. 타임아웃은 60초이며 전송 재개는 지원하지 않습니다.
 
 관련 구현 기준: [MDN WebRTC data channels](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Using_data_channels), [Vite JavaScript API](https://vite.dev/guide/api-javascript).
 
@@ -211,9 +214,9 @@ docker compose down
 - 클립보드 파일/이미지 붙여넣기는 OS·브라우저가 clipboard files를 제공할 때 동작합니다. 파일 첨부는 항상 대안입니다.
 - 다운로드는 사용자의 클릭으로 시작합니다. iOS에서는 브라우저가 제공하는 다운로드/파일 저장 UI를 사용합니다.
 - **두 기기가 페이지를 계속 열어두어야 합니다.** 모바일 백그라운드/절전으로 브라우저가 중단되면 전송이 실패할 수 있습니다.
-- 새로고침/새 연결/서버 재시작 시 기록과 연결을 복구하지 않습니다. 실패한 전송은 다시 보내야 합니다. 상대가 다시 참가하면 새 DataChannel과 새 기록을 사용합니다.
-- Blob은 수신 브라우저 메모리에 보관되며 실사용 메모리는 지정 용량보다 클 수 있습니다. 모바일에서는 큰 제한값을 권장하지 않습니다.
-- 단일 Node 프로세스의 메모리 Room입니다. 다중 replica, 무중단 재연결, 분산 rate limit은 구현하지 않았습니다.
+- 같은 브라우저 프로필끼리 재연결하면 저장된 기록을 복원합니다. 신호 서버의 일시적인 단절과 DataChannel 장애는 자동 복구합니다. 서버 재시작은 Room을 잃으므로 새 코드로 연결해야 합니다. 실패한 파일 전송은 다시 보내야 합니다.
+- 현재 표시 중인 Blob은 메모리를 사용하고 IndexedDB에도 보관됩니다. 실사용 메모리는 지정 용량보다 클 수 있습니다. 모바일에서는 큰 제한값을 권장하지 않습니다.
+- 단일 Node 프로세스의 메모리 Room입니다. 다중 replica, 서버 재시작을 넘는 무중단 재연결, 분산 rate limit은 구현하지 않았습니다.
 
 ## 보안 고려사항
 
@@ -232,7 +235,7 @@ docker compose down
 1. 실제 iPhone Safari / Android Chrome 및 서로 다른 통신망 QA, TURN 연결 검증
 2. 운영 TURN 인증 갱신과 장시간 검증, 연결 상대 확인 UX
 3. 필요에 따라 전송 resume, 메모리 대신 디스크로 스트리밍 수신
-4. Remember Device, PWA, Share Target, Multiple Devices는 별도 확장
+4. 신뢰 기기 자동 참가, PWA, Share Target, Multiple Devices는 별도 확장
 5. Offline Drop/Push는 명시적인 암호화·임시 보관 설계를 거친 별도 기능
 
-현재 MVP에는 기기 기억, PWA, Share Target, 3대 이상 연결, 오프라인 수신, push, 전송 재개를 포함하지 않습니다. 로그인/친구/메신저/클라우드 보관 기능도 만들지 않습니다.
+기기 조합별 기록 보관과 연결 자동 복구는 후속 요청으로 추가했습니다. 신뢰 기기 자동 참가, PWA, Share Target, 3대 이상 연결, 오프라인 수신, push, 전송 중 청크 재개는 미구현입니다. 로그인/친구/메신저/클라우드 보관 기능은 없습니다.

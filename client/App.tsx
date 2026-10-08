@@ -5,7 +5,7 @@ import { Icon } from './icons';
 import { formatBytes, TransferCard } from './TransferCard';
 import { connectionAccess } from '../shared/connection-url';
 
-const statuses: Record<ConnectionStatus, string> = { starting: '연결 준비 중', waiting: '연결 대기 중', connecting: '기기 연결 중', connected: '상대 기기 연결됨', disconnected: '연결 끊김', expired: '세션 만료', error: '연결 실패' };
+const statuses: Record<ConnectionStatus, string> = { starting: '연결 준비 중', waiting: '연결 대기 중', connecting: '기기 연결 중', connected: '상대 기기 연결됨', recovering: '연결 자동 복구 중', disconnected: '연결 끊김', expired: '세션 만료', error: '연결 실패' };
 
 export function App() {
   const [config, setConfig] = useState<PublicConfig>();
@@ -17,6 +17,7 @@ export function App() {
   const [items, setItems] = useState<Transfer[]>([]);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [historyWarning, setHistoryWarning] = useState('');
   const [dragging, setDragging] = useState(false);
   const [help, setHelp] = useState(false);
   const session = useRef<PeerSession | null>(null);
@@ -34,12 +35,13 @@ export function App() {
   function start(settings: PublicConfig, target?: { roomId?: string; code?: string }) {
     const current = ++generation.current;
     session.current?.destroy();
-    setRoom(undefined); setQr(''); setItems([]); setError(''); setText('');
+    setRoom(undefined); setQr(''); setItems([]); setError(''); setHistoryWarning(''); setText('');
     const peer = new PeerSession(settings, {
-      status: value => { if (generation.current === current) { setStatus(value); if (value === 'connected') { setError(''); setTimeout(() => textarea.current?.focus(), 50); } } },
+      status: value => { if (generation.current === current) { setStatus(value); if (value === 'connected') setError(''); } },
       room: value => { if (generation.current === current) setRoom(value); },
       transfers: value => { if (generation.current === current) setItems(value); },
       error: value => { if (generation.current === current) setError(value); },
+      historyWarning: value => { if (generation.current === current) setHistoryWarning(value); },
     });
     session.current = peer;
     void peer.start(target);
@@ -57,11 +59,13 @@ export function App() {
       const match = location.pathname.match(/^\/join\/([^/]+)$/);
       start(settings, match ? { roomId: match[1] } : undefined);
     }).catch(error => { if (!abort.signal.aborted) { setStatus('error'); setError(error.message); } }).finally(() => clearTimeout(timeout));
-    const leave = () => session.current?.destroy();
+    const leave = (event: PageTransitionEvent) => { if (!event.persisted) session.current?.destroy(); };
     window.addEventListener('pagehide', leave);
-    const restore = (event: PageTransitionEvent) => { if (event.persisted) location.reload(); };
+    const restore = () => session.current?.wake();
+    const visible = () => { if (document.visibilityState === 'visible') restore(); };
     window.addEventListener('pageshow', restore);
-    return () => { clearTimeout(timeout); abort.abort(); generation.current++; session.current?.destroy(); window.removeEventListener('pagehide', leave); window.removeEventListener('pageshow', restore); };
+    window.addEventListener('online', restore); window.addEventListener('focus', restore); document.addEventListener('visibilitychange', visible);
+    return () => { clearTimeout(timeout); abort.abort(); generation.current++; session.current?.destroy(); window.removeEventListener('pagehide', leave); window.removeEventListener('pageshow', restore); window.removeEventListener('online', restore); window.removeEventListener('focus', restore); document.removeEventListener('visibilitychange', visible); };
   }, []);
   useEffect(() => {
     if (!joinUrl || !phoneReady) { setQr(''); return; }
@@ -108,7 +112,7 @@ export function App() {
         <aside className="connection-card panel">
           <div className="panel-heading"><span className="step-number">01</span><h2>기기 연결</h2><span className={`status-pill ${connected ? 'online' : ''}`}><i />{connected ? '연결됨' : '2대 연결'}</span></div>
           {connected ? <div className="connected-visual"><div className="device-pair"><span><Icon name="monitor" size={32} /></span><div className="connection-dots">···<Icon name="check" size={18} />···</div><span><Icon name="phone" size={31} /></span></div><h3>보낼 준비가 되었어요</h3><p>어느 기기에서든 자유롭게<br />텍스트와 파일을 주고받으세요.</p><div className="secure-badge"><Icon name="shield" size={15} />암호화된 WebRTC 연결</div></div> : <>
-            <div className="connect-instructions"><h3>{phoneReady ? '다른 기기와 연결하세요' : '휴대폰 연결 주소가 필요해요'}</h3><p>{phoneReady ? '다른 기기의 카메라로 QR을 스캔하세요.' : '현재 주소는 휴대폰 QR 연결에 사용할 수 없어요.'}</p></div>
+            <div className="connect-instructions"><h3>{phoneReady ? '다른 기기와 연결하세요' : '휴대폰 연결 주소가 필요해요'}</h3><p>{phoneReady ? 'QR을 스캔하거나 다른 PC에 연결 코드를 입력하세요.' : '현재 주소는 휴대폰 QR 연결에 사용할 수 없어요.'}</p></div>
             <div className={`qr-frame ${terminal ? 'qr-inactive' : ''}`}>
               {qr && !terminal ? <a href={joinUrl} target="_blank" rel="noopener noreferrer" aria-label="연결 링크"><img src={qr} alt="다른 기기에서 스캔할 연결 QR 코드" width="208" height="208" /></a> : <div className="qr-placeholder"><Icon name={terminal ? 'refresh' : 'link'} size={35} /><span>{terminal ? '새 연결을 시작하세요' : !phoneReady ? '두 기기에서 열리는 HTTPS 주소가 필요해요' : '연결 코드를 준비하고 있어요'}</span>{!phoneReady && !terminal && room && <a className="local-connect-link" href={joinUrl} target="_blank" rel="noopener noreferrer" aria-label="연결 링크">이 PC의 다른 창에서 연결 <Icon name="external" size={13} /></a>}</div>}
             </div>
@@ -123,10 +127,11 @@ export function App() {
         </aside>
 
         <section className="transfer-panel panel" aria-label="자료 전송">
-          <div className="panel-heading"><span className="step-number">02</span><h2>자료 보내기</h2><span className="session-label">현재 세션</span>{items.length > 0 && <button className="clear-button" onClick={() => session.current?.transfers?.clearHistory()}>기록 비우기</button>}</div>
+          <div className="panel-heading"><span className="step-number">02</span><h2>자료 보내기</h2><span className="session-label">기기별 기록</span>{items.length > 0 && <button className="clear-button" onClick={() => session.current?.clearHistory()}>기록 비우기</button>}</div>
           <div className="transfer-body">
-            <div className={`connection-banner ${connected ? 'is-connected' : ''}`} role="status"><span className="banner-icon"><Icon name={connected ? 'check' : 'link'} size={17} /></span><span>{connected ? '두 기기가 연결되었습니다. 바로 보내보세요.' : '기기가 연결되면 전송을 시작할 수 있어요.'}</span><i /></div>
+            <div className={`connection-banner ${connected ? 'is-connected' : ''}`} role="status"><span className="banner-icon"><Icon name={connected ? 'check' : 'link'} size={17} /></span><span>{connected ? '두 기기가 연결되었습니다. 바로 보내보세요.' : status === 'recovering' ? '연결을 자동 복구하고 있습니다. 잠시 기다려 주세요.' : '기기가 연결되면 전송을 시작할 수 있어요.'}</span><i /></div>
             {error && <div className="error-banner" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="알림 닫기"><Icon name="close" size={15} /></button></div>}
+            {historyWarning && <div className="error-banner" role="note">{historyWarning}</div>}
             <div className="history" aria-label="전송 기록" aria-live="polite" aria-relevant="additions">
               {items.length === 0 ? <div className="empty-state"><div className="empty-illustration"><div className="orbit" /><div className="floating-small"><Icon name="image" size={22} /></div><div className="floating-file"><Icon name="file" size={38} /></div><div className="floating-send"><Icon name="send" size={21} /></div></div><h3>{connected ? '첫 번째 자료를 보내보세요' : '옮기고 싶은 것, 무엇이든.'}</h3><p>링크를 붙여넣거나 파일을 끌어다 놓으세요.<br />자료는 연결된 기기로 바로 전달됩니다.</p><div className="type-chips"><span>텍스트</span><span>링크</span><span>이미지</span><span>파일</span></div></div> : items.map(item => <TransferCard key={item.id} item={item} copy={copy} cancel={cancelTransfer} />)}
             </div>
@@ -134,7 +139,7 @@ export function App() {
               <label className="sr-only" htmlFor="message">보낼 텍스트 또는 링크</label><textarea ref={textarea} id="message" placeholder={connected ? '텍스트나 링크를 입력하세요. 이미지도 붙여넣을 수 있어요.' : '기기 연결 후 텍스트나 링크를 입력하세요.'} value={text} maxLength={MAX_TEXT_LENGTH} disabled={!connected} onChange={event => setText(event.target.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); sendText(); } }} onPaste={event => { const pasted = Array.from(event.clipboardData.files); if (pasted.length) { event.preventDefault(); files(pasted); } }} />
               <div className="composer-toolbar"><input ref={input} className="sr-only" type="file" id="files" multiple disabled={!connected} onChange={event => { files(Array.from(event.target.files || [])); event.target.value = ''; }} /><button className="attach-button" disabled={!connected} onClick={() => input.current?.click()}><Icon name="paperclip" size={18} />파일 첨부</button><label className="sr-only" htmlFor="files">전송할 파일 선택</label><span className="shortcut">Ctrl / ⌘ + Enter</span><button className="send-button" disabled={!connected || !text.trim()} onClick={sendText}>보내기<Icon name="arrow" size={17} /></button></div>
             </div>
-            <div className="transfer-footnote"><Icon name="shield" size={13} /><span>서버에 파일을 저장하지 않아요.</span><span className="file-limit">파일당 최대 {formatBytes(config?.maxFileSize || 209715200)}</span></div>
+            <div className="transfer-footnote"><Icon name="shield" size={13} /><span>기록은 이 브라우저에 저장돼요.</span><span className="file-limit">파일당 최대 {formatBytes(config?.maxFileSize || 209715200)}</span></div>
           </div>
         </section>
       </div>
@@ -143,6 +148,6 @@ export function App() {
     <footer><span>QuickDrop <span className="footer-dot">·</span> 작은 연결, 가벼운 일상.</span><span><i />두 기기에서 이 페이지를 열어두세요.</span></footer>
     {notice && <div className="toast" role="status"><Icon name="check" size={17} />{notice}</div>}
     {dragging && <div className="drop-overlay"><Icon name="upload" size={55} /><h2>{connected ? '여기에 놓으면 바로 전송됩니다' : '다른 기기를 먼저 연결하세요'}</h2><p>파일은 연결된 기기로 안전하게 전달됩니다.</p></div>}
-    <dialog ref={dialog} onCancel={() => setHelp(false)} onClose={() => { setHelp(false); helpButton.current?.focus(); }} aria-labelledby="help-title"><div className="dialog-title"><h2 id="help-title">세 단계면 충분해요</h2><button className="icon-button" onClick={() => setHelp(false)} aria-label="사용 방법 닫기"><Icon name="close" /></button></div><ol><li><strong>두 기기에서 QuickDrop을 여세요.</strong><p>휴대폰, PC, 태블릿 모두 같은 방법으로 사용해요.</p></li><li><strong>QR을 스캔하거나 6자리 코드를 입력하세요.</strong><p>연결됨 표시가 양쪽에 나타날 때까지 기다려주세요.</p></li><li><strong>텍스트, 링크, 파일을 보내세요.</strong><p>파일 첨부, 드래그 앤 드롭, 이미지 붙여넣기를 지원해요.</p></li></ol><div className="help-note">두 브라우저를 계속 열어두세요. 새로고침하거나 새 연결을 시작하면 기록이 사라집니다. 받은 파일은 다운로드 버튼으로 저장할 수 있어요.</div>{['localhost', '127.0.0.1'].includes(location.hostname) && <p className="local-note">현재 로컬 주소로 실행 중입니다. 휴대폰에서 QR로 연결하려면 두 기기에서 접근할 수 있는 HTTPS 주소를 사용하세요.</p>}<button className="primary-button full-width" onClick={() => setHelp(false)}>시작해 볼게요</button></dialog>
+    <dialog ref={dialog} onCancel={() => setHelp(false)} onClose={() => { setHelp(false); helpButton.current?.focus(); }} aria-labelledby="help-title"><div className="dialog-title"><h2 id="help-title">세 단계면 충분해요</h2><button className="icon-button" onClick={() => setHelp(false)} aria-label="사용 방법 닫기"><Icon name="close" /></button></div><ol><li><strong>두 기기에서 QuickDrop을 여세요.</strong><p>휴대폰, PC, 태블릿 모두 같은 방법으로 사용해요. PC끼리도 가능합니다.</p></li><li><strong>QR을 스캔하거나 6자리 코드를 입력하세요.</strong><p>연결됨 표시가 양쪽에 나타날 때까지 기다려주세요.</p></li><li><strong>텍스트, 링크, 파일을 보내세요.</strong><p>파일 첨부, 드래그 앤 드롭, 이미지 붙여넣기를 지원해요.</p></li></ol><div className="help-note">같은 기기에서 같은 브라우저로 다시 연결하면 기록을 불러와요. 기록과 받은 파일은 이 브라우저에 저장됩니다. 최근 10개 기기 조합, 조합당 300개 기록, 파일 합계 200MB까지 보관하며 공간이 부족하면 파일 내용부터 지워집니다. 시크릿 모드, 브라우저 데이터 삭제, 주소 변경 시에는 기록을 유지할 수 없어요. 필요한 파일은 다운로드하고 공용 기기에서는 기록 비우기를 눌러 주세요.</div>{['localhost', '127.0.0.1'].includes(location.hostname) && <p className="local-note">현재 로컬 주소로 실행 중입니다. 휴대폰에서 QR로 연결하려면 두 기기에서 접근할 수 있는 HTTPS 주소를 사용하세요.</p>}<button className="primary-button full-width" onClick={() => setHelp(false)}>시작해 볼게요</button></dialog>
   </div>;
 }

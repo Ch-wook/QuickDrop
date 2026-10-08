@@ -1,6 +1,8 @@
 # QuickDrop 프로젝트 진행 현황
 
-최종 정리일: **2026-10-07**. 구현 범위, 수정 이력, 검증 결과, 실행 방법과 남은 작업을 정리합니다.
+최종 정리일: **2026-10-09**. 구현 범위, 수정 이력, 검증 결과, 실행 방법과 남은 작업을 정리합니다.
+
+2026-10-09 연결 안정성·기기별 기록 변경을 구현했습니다. 운영 빌드 E2E **14개 통과/7개 skip**이며 PC 간 전송, 파일 선택 복귀, 신호 재접속·채널 재협상, 새 Room의 기록/파일 복원, 상대별 분리와 삭제, 저장 공간 장애를 검증했습니다. [RELIABILITY.md](./RELIABILITY.md)에 원인·변경·보관 범위를 설명합니다. `go.up.railway.app` 변경은 Railway CLI 인증 오류로 아직 실행하지 못했습니다. 다음 문단들은 앞선 배포의 이력입니다.
 
 2026-10-07 운영 서버 재확인: healthcheck 정상, 공개 주소 일치, 파일당 200MiB 및 수신 보관·예약 합계 200MiB 설정 유지. 아래 전송·회귀 검사와 검색 제출은 2026-10-06 실행 기록입니다.
 
@@ -40,7 +42,7 @@ Railway 공개 주소는 **https://dropgo.up.railway.app**입니다. CLI의 `Una
 | 파일 | 일반 binary, 다중 파일 큐, 16KiB 청크, 수신 Blob |
 | 상태 | 양쪽 진행률, 수신 ACK, 취소, 오류/타임아웃 |
 | 입력 | 첨부, 드래그 앤 드롭, 이미지/파일 paste, Ctrl/⌘+Enter |
-| 세션 | 메모리 기록, 기록 비우기, Blob URL 해제, 퇴장·재참가 |
+| 기록·복구 | 기기 조합별 IndexedDB 기록·파일, 기록 비우기, 신호 재접속·채널 재협상 |
 | 서버 | 대기 TTL, 빈 Room 삭제, heartbeat, rate limit |
 | 화면 | 한국어 반응형 UI, label/focus, 키보드 도움말 |
 | 실행 | dev 명령, production 빌드, Docker/Compose/Railway 설정 |
@@ -156,7 +158,7 @@ production 및 외부 HTTPS E2E 명령은 README에 있습니다.
 - Room 최대 2 Peer, 대기 TTL 10분, JOIN IP당 분당 10회.
 - QR/코드를 아는 사람은 참가할 수 있으며 별도 사용자 인증은 없습니다.
 - HTTPS/WSS, origin/schema/payload 검사, 파일명 정제, React escaping 적용.
-- 새로고침/새 연결/서버 재시작 후 기록이나 전송은 복구하지 않습니다.
+- 같은 브라우저 프로필끼리 다시 연결하면 기록과 보관된 수신 파일을 복원합니다. 서버 재시작 후에는 새 코드로 연결해야 하며 중단된 전송 청크는 복구하지 않습니다.
 - 일부 NAT/방화벽에는 TURN이 필요합니다. `TURN_SECRET`을 통한 임시 인증정보 발급은 구현됐으며 실제 운영 TURN 서버 연결과 검증이 남아 있습니다.
 - `.env`, 로컬 로그/터널 상태/실행 파일, 테스트 산출물은 Git에서 제외합니다.
 
@@ -169,7 +171,7 @@ production 및 외부 HTTPS E2E 명령은 README에 있습니다.
 | 3 | 로컬 Docker Compose 실행/healthcheck 검증 | Docker 실행 환경 |
 | 4 | 200MiB 경계·장시간·백그라운드 | 실기기 메모리/네트워크 검증 |
 
-Remember Device, PWA, Share Target, 3대 이상 연결, Offline Drop, Push, Transfer Resume는 원래 MVP 범위 밖이며 미구현입니다.
+기기 조합별 기록과 일시적인 연결 복구는 후속 요청으로 구현했습니다. 신뢰 기기 자동 참가, PWA, Share Target, 3대 이상 연결, Offline Drop, Push, 전송 중 청크 재개는 미구현입니다.
 
 ## 10. 문서 안내
 

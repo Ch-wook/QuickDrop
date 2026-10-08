@@ -20,7 +20,9 @@ export class Transfers {
   private receiveChain = Promise.resolve();
 
   constructor(private channel: RTCDataChannel, private config: PublicConfig,
-    private changed: (items: Transfer[]) => void, private error: (message: string) => void) {
+    private changed: (items: Transfer[]) => void, private error: (message: string) => void, initial: Transfer[] = []) {
+    this.records = new Map(initial.slice(-MAX_HISTORY).map(item => [item.id, item]));
+    this.retainedBytes = initial.reduce((bytes, item) => bytes + (item.blob?.size || 0), 0);
     channel.binaryType = 'arraybuffer';
     channel.bufferedAmountLowThreshold = LOW_WATER;
     channel.onmessage = event => {
@@ -194,7 +196,7 @@ export class Transfers {
       const blob = incoming.assembler.finish();
       clearTimeout(incoming.timer);
       this.incoming.delete(id); // Keep the completed Blob counted until history is cleared.
-      this.update(id, { status: 'complete', url: URL.createObjectURL(blob), bytes: blob.size });
+      this.update(id, { status: 'complete', url: URL.createObjectURL(blob), blob, bytes: blob.size });
       this.send({ type: 'TRANSFER_COMPLETE', id });
     } else if (message.type === 'TRANSFER_COMPLETE') {
       const item = this.records.get(id);
@@ -228,6 +230,12 @@ export class Transfers {
     this.queued = [];
     for (const [id, item] of this.records) if (isActive(item.status)) this.records.set(id, { ...item, status: 'error', error: '연결이 끊겨 전송을 중단했습니다.' });
     this.publish();
+  }
+  takeHistory() {
+    this.disconnect();
+    const items = [...this.records.values()];
+    this.records.clear(); // Transfer ownership of Blob URLs without revoking them.
+    return items;
   }
   destroy() { this.disconnect(); this.clearHistory(); }
 }

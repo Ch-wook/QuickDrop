@@ -24,6 +24,67 @@ async function setup(roomTtl = 10000) {
   return { ...app, origin, create, connect };
 }
 describe('HTTP and WebSocket integration', () => {
+  it('cleans up a resumable waiting peer when its room expires', async () => {
+    const app = await setup(250); const room = await (await app.create()).json();
+    const a = await app.connect(); const deviceId = crypto.randomUUID();
+    a.send({ type: 'JOIN', roomId: room.roomId, ownerToken: room.ownerToken, deviceId });
+    await expect.poll(() => a.messages.some(message => message.type === 'JOINED')).toBe(true);
+    const joined = a.messages.find(message => message.type === 'JOINED')!;
+    if (joined.type !== 'JOINED') throw new Error('Missing JOINED');
+    await new Promise<void>(resolve => { a.ws.once('close', resolve); a.ws.close(); });
+    await expect.poll(() => app.rooms.rooms.has(room.roomId)).toBe(false);
+    const resumed = await app.connect();
+    resumed.send({ type: 'JOIN', roomId: room.roomId, deviceId, resumeToken: joined.resumeToken });
+    await expect.poll(() => resumed.messages.some(message => message.type === 'ERROR')).toBe(true);
+    expect(resumed.messages).toContainEqual({ type: 'ERROR', message: '자동 복구 시간이 지났습니다. 새 연결을 시작하세요.' });
+  });
+  it('reserves a disconnected slot, authenticates resume, and keeps peer identity and history labels', async () => {
+    const app = await setup(); const room = await (await app.create()).json();
+    const a = await app.connect(); const b = await app.connect();
+    const aDevice = crypto.randomUUID(); const bDevice = crypto.randomUUID();
+    a.send({ type: 'JOIN', roomId: room.roomId, ownerToken: room.ownerToken, deviceId: aDevice });
+    await expect.poll(() => a.messages.some(message => message.type === 'JOINED')).toBe(true);
+    b.send({ type: 'JOIN', code: room.code, deviceId: bDevice });
+    await expect.poll(() => a.messages.some(message => message.type === 'PEER_JOINED')).toBe(true);
+    const joined = a.messages.find(message => message.type === 'JOINED')!;
+    if (joined.type !== 'JOINED') throw new Error('Missing JOINED');
+    expect(joined.resumeToken).toBeDefined();
+    expect(a.messages).toContainEqual(expect.objectContaining({ type: 'PEER_JOINED', peerDeviceId: bDevice }));
+    await new Promise<void>(resolve => { a.ws.once('close', resolve); a.ws.close(); });
+    expect(app.rooms.rooms.get(room.roomId)?.peers.size).toBe(2);
+    expect(b.messages.some(message => message.type === 'PEER_LEFT')).toBe(false);
+    const intruder = await app.connect();
+    intruder.send({ type: 'JOIN', roomId: room.roomId, deviceId: aDevice, resumeToken: crypto.randomUUID() });
+    await expect.poll(() => intruder.messages.some(message => message.type === 'ERROR')).toBe(true);
+    const resumed = await app.connect();
+    resumed.send({ type: 'JOIN', roomId: room.roomId, deviceId: aDevice, resumeToken: joined.resumeToken });
+    await expect.poll(() => resumed.messages.some(message => message.type === 'PEER_RESUMED')).toBe(true);
+    expect(resumed.messages).toContainEqual(expect.objectContaining({ type: 'JOINED', peerId: joined.peerId, resumed: true }));
+    resumed.send({ type: 'LEAVE' });
+    await expect.poll(() => b.messages.some(message => message.type === 'PEER_LEFT')).toBe(true);
+    expect(app.rooms.rooms.get(room.roomId)?.peers.size).toBe(1);
+  });
+
+  it('coordinates repair with a new epoch and discards stale negotiation messages', async () => {
+    const app = await setup(); const room = await (await app.create()).json();
+    const a = await app.connect(); const b = await app.connect();
+    a.send({ type: 'JOIN', roomId: room.roomId, ownerToken: room.ownerToken });
+    await expect.poll(() => a.messages.some(message => message.type === 'JOINED')).toBe(true);
+    b.send({ type: 'JOIN', code: room.code });
+    await expect.poll(() => b.messages.some(message => message.type === 'PEER_JOINED')).toBe(true);
+    const initial = b.messages.find(message => message.type === 'PEER_JOINED');
+    if (initial?.type !== 'PEER_JOINED') throw new Error('Missing negotiation');
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    a.send({ type: 'RECONNECT' });
+    await expect.poll(() => b.messages.filter(message => message.type === 'PEER_JOINED').length).toBe(2);
+    const current = b.messages.filter(message => message.type === 'PEER_JOINED').at(-1)!;
+    if (current.type !== 'PEER_JOINED') throw new Error('Missing repair');
+    expect(current.negotiationId).not.toBe(initial.negotiationId);
+    a.send({ type: 'OFFER', negotiationId: initial.negotiationId, sdp: 'stale' });
+    a.send({ type: 'OFFER', negotiationId: current.negotiationId, sdp: 'fresh' });
+    await expect.poll(() => b.messages.some(message => message.type === 'OFFER')).toBe(true);
+    expect(b.messages.filter(message => message.type === 'OFFER')).toEqual([{ type: 'OFFER', negotiationId: current.negotiationId, sdp: 'fresh' }]);
+  });
   it('keeps temporary invitation pages and APIs out of search results', async () => {
     const runtime = await setup();
     runtime.app.get(['/', '/join/:roomId'], (_req, res) => res.type('html').send('<h1>QuickDrop</h1>'));
@@ -113,8 +174,8 @@ describe('HTTP and WebSocket integration', () => {
     await expect.poll(() => a.messages.map(m => m.type)).toContain('JOINED');
     const b = await app.connect(); b.send({ type: 'JOIN', code: room.code });
     await expect.poll(() => b.messages.map(m => m.type)).toContain('PEER_JOINED');
-    expect(a.messages).toContainEqual({ type: 'PEER_JOINED', initiator: true });
-    expect(b.messages).toContainEqual({ type: 'PEER_JOINED', initiator: false });
+    expect(a.messages).toContainEqual(expect.objectContaining({ type: 'PEER_JOINED', initiator: true }));
+    expect(b.messages).toContainEqual(expect.objectContaining({ type: 'PEER_JOINED', initiator: false }));
     a.send({ type: 'OFFER', sdp: 'offer' }); b.send({ type: 'ANSWER', sdp: 'answer' });
     a.send({ type: 'ICE_CANDIDATE', candidate: { candidate: 'candidate:1', sdpMid: '0' } });
     await expect.poll(() => b.messages.map(m => m.type)).toContain('ICE_CANDIDATE');

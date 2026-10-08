@@ -15,22 +15,24 @@ const candidate = z.object({
 }).strict();
 
 export const signalSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('JOIN'), roomId: z.string().regex(ROOM_ID).optional(), code: z.string().regex(/^\d{6}$/).optional(), ownerToken: z.string().max(64).optional() }).strict()
+  z.object({ type: z.literal('JOIN'), roomId: z.string().regex(ROOM_ID).optional(), code: z.string().regex(/^\d{6}$/).optional(), ownerToken: z.string().max(64).optional(), deviceId: z.string().uuid().optional(), resumeToken: z.string().uuid().optional() }).strict()
     .refine(v => Boolean(v.roomId) !== Boolean(v.code), 'Specify roomId OR code'),
-  z.object({ type: z.literal('OFFER'), sdp: z.string().min(1).max(32000) }).strict(),
-  z.object({ type: z.literal('ANSWER'), sdp: z.string().min(1).max(32000) }).strict(),
-  z.object({ type: z.literal('ICE_CANDIDATE'), candidate }).strict(),
+  z.object({ type: z.literal('LEAVE') }).strict(),
+  z.object({ type: z.literal('RECONNECT') }).strict(),
+  z.object({ type: z.literal('OFFER'), sdp: z.string().min(1).max(32000), negotiationId: z.string().uuid().optional() }).strict(),
+  z.object({ type: z.literal('ANSWER'), sdp: z.string().min(1).max(32000), negotiationId: z.string().uuid().optional() }).strict(),
+  z.object({ type: z.literal('ICE_CANDIDATE'), candidate, negotiationId: z.string().uuid().optional() }).strict(),
 ]);
 export type ClientSignal = z.infer<typeof signalSchema>;
 export type RoomInfo = { roomId: string; code: string; expiresAt: number };
 export type CreatedRoom = RoomInfo & { ownerToken: string };
 export type ServerSignal =
-  | ({ type: 'JOINED'; peerId: string } & RoomInfo)
-  | { type: 'PEER_JOINED'; initiator: boolean }
+  | ({ type: 'JOINED'; peerId: string; resumeToken?: string; resumed?: boolean } & RoomInfo)
+  | { type: 'PEER_JOINED' | 'PEER_RESUMED'; initiator: boolean; peerDeviceId?: string; negotiationId?: string }
   | { type: 'PEER_LEFT' }
   | { type: 'ROOM_EXPIRED' }
   | { type: 'ERROR'; message: string }
-  | Exclude<ClientSignal, { type: 'JOIN' }>;
+  | Exclude<ClientSignal, { type: 'JOIN' | 'LEAVE' | 'RECONNECT' }>;
 
 export function asLink(value: string): string | null {
   try {
@@ -63,7 +65,7 @@ export const isActive = (status: TransferStatus) => ['sending', 'receiving', 'co
 export type Transfer = {
   id: string; direction: 'sent' | 'received'; kind: 'text' | 'link' | 'file';
   time: number; status: TransferStatus; text?: string; name?: string; size?: number;
-  mime?: string; bytes: number; url?: string; error?: string;
+  mime?: string; bytes: number; url?: string; blob?: Blob; error?: string;
 };
 export type PublicConfig = { publicUrl: string; maxFileSize: number; maxSessionBytes: number; iceServers: RTCIceServer[] };
 

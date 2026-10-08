@@ -21,7 +21,8 @@ class Connection {
   connectionState = 'new';
   localDescription?: RTCSessionDescriptionInit;
   remoteDescription?: RTCSessionDescriptionInit;
-  createDataChannel = vi.fn(() => ({ close: vi.fn() }));
+  channel = { readyState: 'open', binaryType: 'arraybuffer', bufferedAmountLowThreshold: 0, onopen: undefined as (() => void) | undefined, onclose: undefined as (() => void) | undefined, send: vi.fn(), close: vi.fn() };
+  createDataChannel = vi.fn(() => this.channel);
   createOffer = vi.fn(async (): Promise<RTCSessionDescriptionInit> => ({ type: 'offer', sdp: 'offer' }));
   createAnswer = vi.fn(async (): Promise<RTCSessionDescriptionInit> => ({ type: 'answer', sdp: 'answer' }));
   setLocalDescription = vi.fn(async (description: RTCSessionDescriptionInit) => { this.localDescription = description; });
@@ -70,6 +71,53 @@ afterEach(() => {
 });
 
 describe('peer connection lifecycle', () => {
+  it('preserves a healthy data channel and reclaims signaling with its secret resume token', async () => {
+    vi.useFakeTimers();
+    const app = setup(); const socket = await join(app.session);
+    const resumeToken = crypto.randomUUID();
+    socket.receive({ ...room, resumeToken });
+    socket.receive({ type: 'PEER_JOINED', initiator: true }); await drain();
+    const connection = Connection.instances[0]; connection.channel.onopen?.();
+    expect(app.callbacks.status).toHaveBeenLastCalledWith('connected');
+    const transfers = app.session.transfers;
+    socket.close();
+    expect(connection.close).not.toHaveBeenCalled();
+    transfers!.sendText('survives signaling failure');
+    expect(connection.channel.send).toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1000);
+    const resumed = Socket.instances.at(-1)!; expect(resumed).not.toBe(socket);
+    resumed.onopen?.();
+    expect(resumed.send).toHaveBeenCalledWith(expect.stringContaining(resumeToken));
+    resumed.receive({ ...room, resumeToken, resumed: true });
+    resumed.receive({ type: 'PEER_RESUMED', initiator: true }); await drain();
+    expect(app.session.transfers).toBe(transfers);
+    expect(Connection.instances).toHaveLength(1);
+    expect(app.callbacks.status).toHaveBeenLastCalledWith('connected');
+    expect(app.callbacks.error).not.toHaveBeenCalled();
+  });
+
+  it('ignores offers from an earlier negotiation epoch', async () => {
+    const app = setup(); const socket = await join(app.session);
+    const current = crypto.randomUUID();
+    socket.receive({ type: 'PEER_JOINED', initiator: false, negotiationId: current }); await drain();
+    socket.receive({ type: 'OFFER', negotiationId: crypto.randomUUID(), sdp: 'old-offer' }); await drain();
+    expect(Connection.instances[0].setRemoteDescription).not.toHaveBeenCalled();
+    socket.receive({ type: 'OFFER', negotiationId: current, sdp: 'current-offer' }); await drain();
+    expect(Connection.instances[0].setRemoteDescription).toHaveBeenCalledWith({ type: 'offer', sdp: 'current-offer' });
+  });
+
+  it('bounds repair attempts when the remote browser stays offline and the server cannot negotiate', async () => {
+    vi.useFakeTimers();
+    const app = setup(); const socket = await join(app.session);
+    socket.receive({ ...room, resumeToken: crypto.randomUUID() });
+    socket.receive({ type: 'PEER_JOINED', initiator: true }); await drain();
+    const channel = Connection.instances[0].channel; channel.onopen?.();
+    channel.readyState = 'closed'; channel.onclose?.();
+    await vi.advanceTimersByTimeAsync(100000);
+    expect(socket.send.mock.calls.filter(([message]) => JSON.parse(message).type === 'RECONNECT')).toHaveLength(3);
+    expect(app.callbacks.status).toHaveBeenLastCalledWith('error');
+    expect(app.callbacks.error).toHaveBeenCalledTimes(1);
+  });
   it('renews temporary TURN credentials before every new peer negotiation', async () => {
     const fresh = { ...relay, iceServers: [{ urls: 'turns:relay.example:5349', username: 'fresh', credential: 'new-secret' }] };
     const refreshed = { ...fresh, iceServers: [{ ...fresh.iceServers[0], username: 'refreshed' }] };
@@ -132,7 +180,7 @@ describe('peer connection lifecycle', () => {
     expect(Connection.instances).toHaveLength(0);
   });
 
-  it('does not resume a negotiation or queued status update after signaling closes', async () => {
+  it('stops pending negotiation when signaling fails before a resume token is issued', async () => {
     const pending = deferred<Response>(); vi.mocked(fetch).mockReturnValue(pending.promise);
     const app = setup(relay); const socket = await join(app.session);
     socket.receive({ type: 'PEER_JOINED', initiator: false });
@@ -140,7 +188,7 @@ describe('peer connection lifecycle', () => {
     socket.receive(room); socket.close();
     pending.resolve(response(relay)); await drain();
     expect(Connection.instances).toHaveLength(0);
-    expect(app.callbacks.status).toHaveBeenLastCalledWith('disconnected');
+    expect(app.callbacks.status).toHaveBeenLastCalledWith('error');
     expect(app.callbacks.error).toHaveBeenCalledTimes(1);
   });
 

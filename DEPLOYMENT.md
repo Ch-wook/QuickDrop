@@ -1,5 +1,11 @@
 # QuickDrop 출시 및 운영
 
+## 2026-10-09 연결 안정성·기기별 기록 변경
+
+로컬 빌드와 단위·통합 92개, 운영 빌드 E2E 14개 통과/7개 skip을 확인했습니다. GitHub `main` 푸시를 통한 자동 배포 후 상태와 공개 자산·전송을 확인합니다. 현재 공개 주소는 `https://dropgo.up.railway.app`이며, `go.up.railway.app`으로의 변경은 CLI `Unauthorized`로 아직 실행하지 못했습니다. 변경 원인·기록 보관·범위는 [RELIABILITY.md](./RELIABILITY.md)에 있습니다.
+
+아래 항목은 이전 배포 이력입니다.
+
 확인일: 2026-10-06. **최적화본을 https://dropgo.up.railway.app 에 배포하고 검증했습니다.** GitHub의 Railway 배포 성공 상태와 공개 서버의 실제 자산 해시·내용·압축·캐시 설정을 확인했습니다. Chromium·Firefox 공개 E2E 2개가 통과했으며 QR 해독, WSS, WebRTC 텍스트 및 72,000-byte 파일의 다운로드 일치를 검증했습니다.
 
 후속 **200MiB·검색 접근 변경 `7272183`의 배포와 공개 검증도 완료했습니다.** 운영 설정의 `maxFileSize=209715200`, 검색 제목·canonical·robots·사이트맵·임시 참가 URL의 noindex, 새 자산 `index-DKbB_D6K.js`를 확인했습니다. 단위·통합 86개 및 공개 Chromium·Firefox E2E 2개(19.7초)가 통과했습니다. 최신 기능 배포 ID는 `26dfe327-635a-45fe-8dce-17b2837f2f0a`이며 아래 첫 배포 식별자들은 이전 최적화 배포 기록입니다. 검색 제출 상태는 [SEARCH.md](./SEARCH.md)에 기록합니다.
