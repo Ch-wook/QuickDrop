@@ -8,7 +8,9 @@
 - 상대 미연결 상태에서 기록 열기와 받은 파일 다운로드, 대화방 이름 저장 및 새로고침·재전송 후 유지, v1→v2 IndexedDB 이전과 기존 파일 바이트 일치를 확인했습니다. 기존 12개 방에 새 상대를 연결해도 이전 방이 남는지 검사했습니다.
 - Chromium·Firefox에서 Blob 복원을 확인했습니다. 설치된 Windows WebKit은 IndexedDB Blob 저장을 지원하지 않아 파일 메타데이터·방 이름 이전을 검사했습니다. 기존 WebRTC 미지원/중복 7개 skip은 그대로입니다. 실제 iPhone Safari 파일 보관 검증을 의미하지 않습니다.
 - 대화방 이전 검사는 별도 3103 서버에서 실행해 연결 회귀 검사의 WebSocket 한도를 소비하지 않도록 했습니다. 운영 요청 제한은 낮추거나 해제하지 않았습니다.
-- 공개 배포 확인 결과는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 기록합니다. 사용 방법과 보관 범위는 [HISTORY_ROOMS.md](./HISTORY_ROOMS.md)에 있습니다.
+- 기능 코드 `9abc725`, Railway 배포 `f0e2b71b-d6f0-4810-81f9-beb662c77077`: **success**. 공개 `deploy:verify` 통과; JS/CSS 해시·내용·Brotli/캐시·검색 설정과 200MiB 제한 일치.
+- 공개 Chromium **2개 통과(21.6초)**, Firefox **2개 통과(21.9초)**. QR/WSS/WebRTC, 신호·채널 복구, 방 이름 저장·새로고침 후 유지, 상대 미연결 기록 열람, 같은 상대의 기록·파일 복원 및 다운로드 바이트 일치를 검사했습니다. 운영 JOIN 한도에 맞춰 두 브라우저 검사의 시작 간격을 1분 이상 두었습니다.
+- 상세 배포는 [DEPLOYMENT.md](./DEPLOYMENT.md), 사용 방법과 보관 범위는 [HISTORY_ROOMS.md](./HISTORY_ROOMS.md)에 있습니다.
 
 ## 2026-10-09 연결 복구·PC 간 전송·기기별 기록
 

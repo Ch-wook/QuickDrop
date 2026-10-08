@@ -4,7 +4,11 @@
 
 상대별 대화방 목록·이름 저장·상대 미연결 기록 열람을 추가했습니다. 새 상대와 연결해도 기존 방을 자동 삭제하지 않으며 다른 상대의 방을 보는 동안 전송을 막습니다. IndexedDB v1의 남아 있는 기록과 파일을 v2로 옮깁니다. [구성·사용 방법](./HISTORY_ROOMS.md)
 
-로컬 단위·통합 92개, 운영 빌드 E2E 17개 통과/7개 skip과 빌드를 확인했습니다. `main` 푸시로 Railway 자동 배포를 진행하며 공개 자산·전송 검증 결과를 이 항목에 추가합니다. 주소는 **https://dropgo.up.railway.app**입니다.
+기능 코드 [`9abc725b3f520d25c9876a74cf9bfc38fdc5cd31`](https://github.com/Ch-wook/QuickDrop/commit/9abc725b3f520d25c9876a74cf9bfc38fdc5cd31)를 `main`에 푸시했고 Railway 배포 `f0e2b71b-d6f0-4810-81f9-beb662c77077`의 **success**를 확인했습니다. 주소는 **https://dropgo.up.railway.app**입니다.
+
+로컬 단위·통합 **92개**, 운영 빌드 E2E **17개 통과/7개 skip**, 빌드 및 공개 `deploy:verify`가 통과했습니다. JS `index-DYZK4ETX.js`, CSS `index-BHRsr3qc.css`의 내용·해시·Brotli/캐시, 검색 설정과 파일당 200MiB 설정이 로컬 빌드와 일치합니다.
+
+공개 Chromium **2개(21.6초)**, Firefox **2개(21.9초)**가 통과했습니다. QR/WSS/WebRTC 전송과 파일 선택·연결 복구에 더해, 대화방 이름 저장·새로고침 후 유지, 상대 미연결 상태의 이전 기록 열람, 같은 상대 재연결 시 기록·받은 파일 복원과 다운로드 바이트 일치를 확인했습니다. 상대 교체·방별 삭제·12개 방 보존과 DB 이전의 전체 조건은 로컬 E2E에서 확인했습니다. 새 화면을 사용하려면 양쪽 기기에서 한 번 새로고침하세요.
 
 ## 2026-10-09 연결 안정성·기기별 기록 변경
 

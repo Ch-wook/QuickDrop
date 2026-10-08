@@ -10,7 +10,7 @@
 
 전체 프로젝트 요약은 [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md), 구현 현황과 남은 작업은 [PROJECT_STATUS.md](./PROJECT_STATUS.md), 파일·API 구성은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), 검사 결과는 [VALIDATION.md](./VALIDATION.md)를 참고하세요.
 
-서비스 주소: **https://dropgo.up.railway.app**. 2026-10-09 연결 안정성·기기별 기록 개선본을 배포하고 Chromium·Firefox에서 공개 QR, PC 간 전송, 자동 복구와 기록·받은 파일 복원을 검증했습니다. 기존 페이지는 두 기기에서 한 번 새로고침하세요. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 새 기능과 제한은 [RELIABILITY.md](./RELIABILITY.md), 성능 개선 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
+서비스 주소: **https://dropgo.up.railway.app**. 2026-10-09 대화방 목록·이름 저장 추가 변경을 배포하고 Chromium·Firefox 공개 검사 4개로 QR, PC 간 전송, 자동 복구, 이름 저장과 연결 전 기록·받은 파일 복원을 검증했습니다. 기존 페이지는 두 기기에서 한 번 새로고침하세요. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 새 기능과 제한은 [RELIABILITY.md](./RELIABILITY.md), 성능 개선 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
 
 상대별 ‘이전 대화방’ 목록과 이름 저장을 추가했습니다. 다른 기기와 연결했다가 돌아와도 같은 브라우저 조합의 기록을 이어가며 연결 전에도 기록을 열어볼 수 있습니다. [사용 방법·보관 범위](./HISTORY_ROOMS.md), [전체 프로젝트 정리](./PROJECT_OVERVIEW.md)
 

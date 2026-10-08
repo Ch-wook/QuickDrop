@@ -56,7 +56,7 @@
 | `tests/peer.test.ts`, `tests/server.test.ts` | 정상 채널 유지, 비밀 토큰 검증, 오래된 신호 차단 |
 | `tests/e2e/stability.spec.ts` | PC 간 전송, 실제 파일 선택 이벤트, 통신/채널 장애, 기록 복원·삭제·상대 분리 |
 
-단위·통합 92개와 운영 빌드 E2E 14개가 통과했습니다. Windows WebKit의 WebRTC 미지원 및 중복 검사 7개는 skip했습니다. 실제 검사 범위와 공개 배포 결과는 [VALIDATION.md](./VALIDATION.md), [DEPLOYMENT.md](./DEPLOYMENT.md)에 기록합니다.
+대화방 확장 후 단위·통합 92개와 운영 빌드 E2E 17개가 통과했습니다. 공개 Chromium·Firefox 검사 4개도 통과했습니다. Windows WebKit의 WebRTC 미지원 및 중복 검사 7개는 skip했습니다. 실제 검사 범위와 공개 배포 결과는 [VALIDATION.md](./VALIDATION.md), [DEPLOYMENT.md](./DEPLOYMENT.md)에 기록합니다.
 
 ## 짧은 주소 변경
 
