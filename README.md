@@ -10,7 +10,7 @@
 
 전체 프로젝트 요약은 [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md), 구현 현황과 남은 작업은 [PROJECT_STATUS.md](./PROJECT_STATUS.md), 파일·API 구성은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), 검사 결과는 [VALIDATION.md](./VALIDATION.md)를 참고하세요.
 
-서비스 주소: **https://dropgo.up.railway.app**. 2026-10-06 최적화본 배포를 완료했으며 Chromium·Firefox에서 공개 QR 연결과 실제 텍스트·파일 전송을 검증했습니다. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 개선 내용과 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
+서비스 주소: **https://dropgo.up.railway.app**. 2026-10-09 연결 안정성·기기별 기록 개선본을 배포하고 Chromium·Firefox에서 공개 QR, PC 간 전송, 자동 복구와 기록·받은 파일 복원을 검증했습니다. 기존 페이지는 두 기기에서 한 번 새로고침하세요. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 새 기능과 제한은 [RELIABILITY.md](./RELIABILITY.md), 성능 개선 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
 
 별도 도메인 구매 없이 검색으로 찾아오는 방식을 준비했습니다. 한국어 검색 정보, 사이트맵, 네이버 제출 방법과 실제 제출 상태는 [SEARCH.md](./SEARCH.md)를 참고하세요. 검색 결과 노출이나 순위가 보장되는 것은 아닙니다.
 

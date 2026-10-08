@@ -2,7 +2,11 @@
 
 ## 2026-10-09 연결 안정성·기기별 기록 변경
 
-로컬 빌드와 단위·통합 92개, 운영 빌드 E2E 14개 통과/7개 skip을 확인했습니다. GitHub `main` 푸시를 통한 자동 배포 후 상태와 공개 자산·전송을 확인합니다. 현재 공개 주소는 `https://dropgo.up.railway.app`이며, `go.up.railway.app`으로의 변경은 CLI `Unauthorized`로 아직 실행하지 못했습니다. 변경 원인·기록 보관·범위는 [RELIABILITY.md](./RELIABILITY.md)에 있습니다.
+기능 코드 [`7b7d6e549d3374ffb6c0f0273c03bc67ede5af59`](https://github.com/Ch-wook/QuickDrop/commit/7b7d6e549d3374ffb6c0f0273c03bc67ede5af59)를 `main`에 푸시해 Railway 배포 `0bc339da-6c3a-4037-bd88-b609c613883a`의 **success**를 확인했습니다. 로컬 빌드·단위·통합 92개·운영 빌드 E2E 14개 통과/7개 skip입니다. 공개 `deploy:verify`도 통과했으며 `index-ikTvQC87.js`, CSS의 해시·내용·Brotli, 검색 설정, 200MiB 운영 제한이 일치합니다.
+
+현재 공개 주소는 **https://dropgo.up.railway.app**입니다. `go.up.railway.app`으로의 변경은 CLI `Unauthorized`로 아직 실행하지 못했습니다. 변경 원인·기록 보관·범위는 [RELIABILITY.md](./RELIABILITY.md)에 있습니다.
+
+공개 Chromium **2개(19.9초)**, Firefox **2개(20.9초)**가 통과했습니다. QR/WSS/파일 다운로드와 두 데스크톱 프로필의 코드 연결, 정상 전송 유지, 신호 재접속, 채널 강제 종료 후 복구, 새로고침·새 Room의 기록/파일 복원 및 바이트 일치를 확인했습니다. 운영 JOIN 제한을 공유하므로 브라우저별 검사를 1분 이상 간격으로 실행했습니다. 기존에 열린 페이지는 양쪽 기기에서 한 번 새로고침해야 새 코드를 사용합니다.
 
 아래 항목은 이전 배포 이력입니다.
 
