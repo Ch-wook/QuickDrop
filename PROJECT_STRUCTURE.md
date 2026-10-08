@@ -32,6 +32,7 @@ QuickDrop/
 │  ├─ peer.ts                  WebSocket 및 RTCPeerConnection 수명 관리
 │  ├─ transfers.ts             파일 대기열, 청크, ACK, 취소, 수신 메모리
 │  ├─ history.ts               기기 ID, IndexedDB 기록·Blob, 보관 한도
+│  ├─ HistoryRooms.tsx          이전 상대별 대화방 목록, 이름 편집
 │  ├─ TransferCard.tsx         텍스트/링크/이미지/파일 기록 카드
 │  ├─ icons.tsx                프로젝트 내부 SVG 아이콘
 │  └─ styles.css               반응형 스타일과 상태별 표현

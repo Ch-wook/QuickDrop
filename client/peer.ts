@@ -3,7 +3,7 @@ import { Transfers } from './transfers';
 import { deviceId, PairHistory } from './history';
 
 export type ConnectionStatus = 'starting' | 'waiting' | 'connecting' | 'connected' | 'recovering' | 'disconnected' | 'expired' | 'error';
-type Callbacks = { status: (status: ConnectionStatus) => void; room: (room: RoomInfo) => void; transfers: (items: Transfer[]) => void; error: (message: string) => void; historyWarning?: (message: string) => void };
+type Callbacks = { status: (status: ConnectionStatus) => void; room: (room: RoomInfo) => void; transfers: (items: Transfer[]) => void; error: (message: string) => void; historyWarning?: (message: string) => void; pair?: (id: string | undefined) => void };
 export class PeerSession {
   private ws?: WebSocket;
   private pc?: RTCPeerConnection;
@@ -113,7 +113,7 @@ export class PeerSession {
     this.history = pairId ? new PairHistory(pairId, this.callbacks.historyWarning || this.callbacks.error) : undefined;
     const records = this.history ? await this.history.load() : [];
     if (this.closed || this.terminal) { this.releaseUrls(records); return; }
-    this.records = records; this.callbacks.transfers(records);
+    this.records = records; this.history?.remember(records); this.callbacks.pair?.(pairId); this.callbacks.transfers(records);
   }
   private async handleSignal(message: ServerSignal) {
     switch (message.type) {

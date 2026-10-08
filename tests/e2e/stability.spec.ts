@@ -63,6 +63,12 @@ test('desktop peers: file picker, signaling recovery, channel repair, durable pa
     await expect(a.getByText('연결을 자동 복구하고 있습니다. 잠시 기다려 주세요.')).toBeVisible();
     await Promise.all([connected(a), connected(b)]);
     await send(b, '자동 복구 후 양방향 전송'); await expect(a.getByText('자동 복구 후 양방향 전송', { exact: true })).toBeVisible();
+    await a.getByRole('textbox', { name: '대화방 이름' }).fill('내 PC B');
+    await a.getByRole('button', { name: '이름 저장', exact: true }).click();
+    await expect(a.getByRole('button', { name: '내 PC B 기록 열기', exact: true })).toBeVisible();
+    await b.getByRole('textbox', { name: '대화방 이름' }).fill('내 PC A');
+    await b.getByRole('button', { name: '이름 저장', exact: true }).click();
+    await expect(b.getByRole('button', { name: '내 PC A 기록 열기', exact: true })).toBeVisible();
 
     // Explicitly disconnect, reload both browsers, then create a new room.
     await b.getByRole('button', { name: '새 연결 시작' }).click();
@@ -70,6 +76,12 @@ test('desktop peers: file picker, signaling recovery, channel repair, durable pa
     await Promise.all([a.reload(), b.reload()]);
     await expect(a.getByTestId('connection-code')).toHaveText(/\d{3} \d{3}/);
     await expect(b.getByTestId('connection-code')).toHaveText(/\d{3} \d{3}/);
+    // Past rooms can be opened before either device reconnects.
+    await a.getByRole('button', { name: '내 PC B 기록 열기', exact: true }).click();
+    await expect(a.getByText('PC A에서 PC B로', { exact: true })).toBeVisible();
+    await expect(a.getByRole('textbox', { name: '보낼 텍스트 또는 링크' })).toBeDisabled();
+    await b.getByRole('button', { name: '내 PC A 기록 열기', exact: true }).click();
+    await expect(b.getByRole('link', { name: 'pc-transfer.bin 다운로드' })).toBeVisible();
     await pair(a, b);
     await expect(a.getByText('PC A에서 PC B로', { exact: true })).toBeVisible();
     await expect(b.getByText('PC B에서 PC A로', { exact: true })).toBeVisible();
@@ -95,6 +107,22 @@ test('desktop peers: file picker, signaling recovery, channel repair, durable pa
       await c.goto(baseURL!); await expect(c.getByTestId('connection-code')).toHaveText(/\d{3} \d{3}/);
       await pair(a, c);
       await expect(a.getByText('PC A에서 PC B로', { exact: true })).toHaveCount(0);
+      await send(c, 'PC C의 독립 대화방'); await expect(a.getByText('PC C의 독립 대화방', { exact: true })).toBeVisible();
+      await a.getByRole('textbox', { name: '대화방 이름' }).fill('내 PC C');
+      await a.getByRole('button', { name: '이름 저장', exact: true }).click();
+      await expect(a.getByRole('button', { name: '내 PC C 기록 열기', exact: true })).toBeVisible();
+      await a.getByRole('button', { name: '내 PC B 기록 열기', exact: true }).click();
+      await expect(a.getByText('PC A에서 PC B로', { exact: true })).toBeVisible();
+      await expect(a.getByText('PC C의 독립 대화방', { exact: true })).toHaveCount(0);
+      await expect(a.getByRole('textbox', { name: '보낼 텍스트 또는 링크' })).toBeDisabled();
+      await expect(a.locator('input[type=file]')).toBeDisabled();
+      // Incoming live records must not overwrite the archive being browsed.
+      await send(c, '기록 열람 중에도 연결 유지');
+      await expect(a.getByRole('button', { name: '내 PC C 기록 열기', exact: true })).toContainText('기록 열람 중에도 연결 유지');
+      await expect(a.getByText('PC A에서 PC B로', { exact: true })).toBeVisible();
+      await a.getByRole('button', { name: '현재 연결로 돌아가기' }).click();
+      await expect(a.getByText('기록 열람 중에도 연결 유지', { exact: true })).toBeVisible();
+      await expect(a.getByRole('textbox', { name: '보낼 텍스트 또는 링크' })).toBeEnabled();
       await c.getByRole('button', { name: '새 연결 시작' }).click();
       await expect(a.getByRole('alert')).toContainText('상대 기기가 나갔습니다.');
     } finally { await cContext.close(); }
@@ -110,6 +138,12 @@ test('desktop peers: file picker, signaling recovery, channel repair, durable pa
     await pair(a, b);
     await expect(a.locator('.transfer-card')).toHaveCount(0);
     await expect(b.locator('.transfer-card')).toHaveCount(0);
+    // Clearing B's room must leave C's room and its name intact.
+    await a.getByRole('button', { name: '내 PC C 기록 열기', exact: true }).click();
+    await expect(a.getByText('PC C의 독립 대화방', { exact: true })).toBeVisible();
+    await a.getByRole('button', { name: '기록 비우기', exact: true }).click();
+    await expect(a.locator('.transfer-card')).toHaveCount(0);
+    await a.getByRole('button', { name: '현재 연결로 돌아가기' }).click();
     expect(errors).toEqual([]);
   } finally { await aContext.close(); await bContext.close(); }
 });

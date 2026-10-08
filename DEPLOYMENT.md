@@ -1,5 +1,11 @@
 # QuickDrop 출시 및 운영
 
+## 2026-10-09 이전 상대별 대화방 확장
+
+상대별 대화방 목록·이름 저장·상대 미연결 기록 열람을 추가했습니다. 새 상대와 연결해도 기존 방을 자동 삭제하지 않으며 다른 상대의 방을 보는 동안 전송을 막습니다. IndexedDB v1의 남아 있는 기록과 파일을 v2로 옮깁니다. [구성·사용 방법](./HISTORY_ROOMS.md)
+
+로컬 단위·통합 92개, 운영 빌드 E2E 17개 통과/7개 skip과 빌드를 확인했습니다. `main` 푸시로 Railway 자동 배포를 진행하며 공개 자산·전송 검증 결과를 이 항목에 추가합니다. 주소는 **https://dropgo.up.railway.app**입니다.
+
 ## 2026-10-09 연결 안정성·기기별 기록 변경
 
 기능 코드 [`7b7d6e549d3374ffb6c0f0273c03bc67ede5af59`](https://github.com/Ch-wook/QuickDrop/commit/7b7d6e549d3374ffb6c0f0273c03bc67ede5af59)를 `main`에 푸시해 Railway 배포 `0bc339da-6c3a-4037-bd88-b609c613883a`의 **success**를 확인했습니다. 로컬 빌드·단위·통합 92개·운영 빌드 E2E 14개 통과/7개 skip입니다. 공개 `deploy:verify`도 통과했으며 `index-ikTvQC87.js`, CSS의 해시·내용·Brotli, 검색 설정, 200MiB 운영 제한이 일치합니다.

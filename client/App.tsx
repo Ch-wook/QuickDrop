@@ -4,6 +4,8 @@ import { PeerSession, type ConnectionStatus } from './peer';
 import { Icon } from './icons';
 import { formatBytes, TransferCard } from './TransferCard';
 import { connectionAccess } from '../shared/connection-url';
+import { listHistoryRooms, PairHistory, renameHistoryRoom, watchHistory, type HistoryRoom } from './history';
+import { HistoryRooms } from './HistoryRooms';
 
 const statuses: Record<ConnectionStatus, string> = { starting: '연결 준비 중', waiting: '연결 대기 중', connecting: '기기 연결 중', connected: '상대 기기 연결됨', recovering: '연결 자동 복구 중', disconnected: '연결 끊김', expired: '세션 만료', error: '연결 실패' };
 
@@ -15,6 +17,12 @@ export function App() {
   const [code, setCode] = useState('');
   const [text, setText] = useState('');
   const [items, setItems] = useState<Transfer[]>([]);
+  const [rooms, setRooms] = useState<HistoryRoom[]>([]);
+  const [activePairId, setActivePairId] = useState<string>();
+  const [selectedPairId, setSelectedPairId] = useState<string>();
+  const [archivedItems, setArchivedItems] = useState<Transfer[]>([]);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archiveRevision, setArchiveRevision] = useState(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [historyWarning, setHistoryWarning] = useState('');
@@ -28,6 +36,10 @@ export function App() {
   const helpButton = useRef<HTMLButtonElement>(null);
   const dragDepth = useRef(0);
   const connected = status === 'connected';
+  const browsingArchive = !!selectedPairId && selectedPairId !== activePairId;
+  const canSend = connected && !browsingArchive;
+  const visibleItems = browsingArchive ? archivedItems : items;
+  const selectedRoom = rooms.find(value => value.id === (selectedPairId || activePairId));
   const joinUrl = room ? `${config?.publicUrl || location.origin}/join/${room.roomId}` : '';
   const phoneReady = connectionAccess(config?.publicUrl || location.origin) === 'ready';
   const terminal = ['error', 'expired', 'disconnected'].includes(status);
@@ -35,13 +47,14 @@ export function App() {
   function start(settings: PublicConfig, target?: { roomId?: string; code?: string }) {
     const current = ++generation.current;
     session.current?.destroy();
-    setRoom(undefined); setQr(''); setItems([]); setError(''); setHistoryWarning(''); setText('');
+    setRoom(undefined); setQr(''); setItems([]); setActivePairId(undefined); setSelectedPairId(undefined); setError(''); setHistoryWarning(''); setText('');
     const peer = new PeerSession(settings, {
       status: value => { if (generation.current === current) { setStatus(value); if (value === 'connected') setError(''); } },
       room: value => { if (generation.current === current) setRoom(value); },
       transfers: value => { if (generation.current === current) setItems(value); },
       error: value => { if (generation.current === current) setError(value); },
       historyWarning: value => { if (generation.current === current) setHistoryWarning(value); },
+      pair: value => { if (generation.current === current) { setActivePairId(value); setSelectedPairId(undefined); } },
     });
     session.current = peer;
     void peer.start(target);
@@ -78,6 +91,37 @@ export function App() {
   }, [joinUrl, phoneReady]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 2600); return () => clearTimeout(timer); }, [notice]);
   useEffect(() => { if (help) dialog.current?.showModal(); else dialog.current?.close(); }, [help]);
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => { void listHistoryRooms().then(value => { if (alive) setRooms(value); }).catch(() => undefined); };
+    refresh(); const unwatch = watchHistory(refresh);
+    return () => { alive = false; unwatch(); };
+  }, []);
+  useEffect(() => {
+    let alive = true; let loaded: Transfer[] = [];
+    setArchivedItems([]);
+    if (!browsingArchive || !selectedPairId) { setArchiveLoading(false); return; }
+    setArchiveLoading(true);
+    const history = new PairHistory(selectedPairId, setHistoryWarning);
+    void history.load().then(value => {
+      loaded = value;
+      if (alive) { setArchivedItems(value); setArchiveLoading(false); }
+      else value.forEach(item => { if (item.url) URL.revokeObjectURL(item.url); });
+    });
+    return () => { alive = false; loaded.forEach(item => { if (item.url) URL.revokeObjectURL(item.url); }); };
+  }, [browsingArchive, selectedPairId, archiveRevision]);
+
+  async function renameRoom(id: string, name: string) {
+    try { await renameHistoryRoom(id, name); setNotice('대화방 이름을 저장했습니다.'); }
+    catch { setHistoryWarning('대화방 이름을 저장할 수 없습니다. 브라우저 저장 공간을 확인하세요.'); }
+  }
+  function selectRoom(id?: string) { setSelectedPairId(id); setText(''); }
+  function clearHistory() {
+    if (!browsingArchive) { session.current?.clearHistory(); return; }
+    if (!selectedPairId) return;
+    new PairHistory(selectedPairId, setHistoryWarning).save([]);
+    setArchivedItems([]); setArchiveRevision(value => value + 1);
+  }
 
   const copy = useCallback(async (value: string) => {
     try {
@@ -91,11 +135,11 @@ export function App() {
   }, []);
   const cancelTransfer = useCallback((id: string) => session.current?.transfers?.cancel(id), []);
   function files(selected: File[]) {
-    if (!connected) { setError('다른 기기를 먼저 연결하세요.'); return; }
+    if (!canSend) { setError(browsingArchive ? '현재 연결 대화방으로 돌아간 뒤 보내세요.' : '다른 기기를 먼저 연결하세요.'); return; }
     try { session.current?.transfers?.sendFiles(selected); } catch (error) { setError(error instanceof Error ? error.message : '파일을 보낼 수 없습니다.'); }
   }
   function sendText() {
-    if (!text.trim() || !connected) return;
+    if (!text.trim() || !canSend) return;
     try { session.current?.transfers?.sendText(text); setText(''); textarea.current?.focus(); }
     catch (error) { setError(error instanceof Error ? error.message : '텍스트를 보낼 수 없습니다.'); }
   }
@@ -127,17 +171,18 @@ export function App() {
         </aside>
 
         <section className="transfer-panel panel" aria-label="자료 전송">
-          <div className="panel-heading"><span className="step-number">02</span><h2>자료 보내기</h2><span className="session-label">기기별 기록</span>{items.length > 0 && <button className="clear-button" onClick={() => session.current?.clearHistory()}>기록 비우기</button>}</div>
-          <div className="transfer-body">
+          <div className="panel-heading"><span className="step-number">02</span><h2>자료 보내기</h2><span className="session-label">기기별 기록</span>{visibleItems.length > 0 && <button className="clear-button" onClick={clearHistory}>기록 비우기</button>}</div>
+          <div className="transfer-body"><HistoryRooms rooms={rooms} activeId={activePairId} selectedId={selectedPairId} connected={connected} select={selectRoom} rename={renameRoom} />
             <div className={`connection-banner ${connected ? 'is-connected' : ''}`} role="status"><span className="banner-icon"><Icon name={connected ? 'check' : 'link'} size={17} /></span><span>{connected ? '두 기기가 연결되었습니다. 바로 보내보세요.' : status === 'recovering' ? '연결을 자동 복구하고 있습니다. 잠시 기다려 주세요.' : '기기가 연결되면 전송을 시작할 수 있어요.'}</span><i /></div>
+            {browsingArchive && <div className="archive-banner" role="note"><strong>{selectedRoom?.name || '이전 대화방'} 기록을 보고 있어요.</strong><p>다시 보내려면 같은 기기와 QR 또는 코드로 연결하세요.</p><button onClick={() => selectRoom()}>현재 연결로 돌아가기 <Icon name="arrow" size={14} /></button></div>}
             {error && <div className="error-banner" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="알림 닫기"><Icon name="close" size={15} /></button></div>}
             {historyWarning && <div className="error-banner" role="note">{historyWarning}</div>}
             <div className="history" aria-label="전송 기록" aria-live="polite" aria-relevant="additions">
-              {items.length === 0 ? <div className="empty-state"><div className="empty-illustration"><div className="orbit" /><div className="floating-small"><Icon name="image" size={22} /></div><div className="floating-file"><Icon name="file" size={38} /></div><div className="floating-send"><Icon name="send" size={21} /></div></div><h3>{connected ? '첫 번째 자료를 보내보세요' : '옮기고 싶은 것, 무엇이든.'}</h3><p>링크를 붙여넣거나 파일을 끌어다 놓으세요.<br />자료는 연결된 기기로 바로 전달됩니다.</p><div className="type-chips"><span>텍스트</span><span>링크</span><span>이미지</span><span>파일</span></div></div> : items.map(item => <TransferCard key={item.id} item={item} copy={copy} cancel={cancelTransfer} />)}
+              {archiveLoading ? <div className="archive-loading" role="status">기록을 불러오고 있어요.</div> : visibleItems.length === 0 ? <div className="empty-state"><div className="empty-illustration"><div className="orbit" /><div className="floating-small"><Icon name="image" size={22} /></div><div className="floating-file"><Icon name="file" size={38} /></div><div className="floating-send"><Icon name="send" size={21} /></div></div><h3>{browsingArchive ? '저장된 기록이 없어요' : connected ? '첫 번째 자료를 보내보세요' : '옮기고 싶은 것, 무엇이든.'}</h3><p>링크를 붙여넣거나 파일을 끌어다 놓으세요.<br />자료는 연결된 기기로 바로 전달됩니다.</p><div className="type-chips"><span>텍스트</span><span>링크</span><span>이미지</span><span>파일</span></div></div> : visibleItems.map(item => <TransferCard key={item.id} item={item} copy={copy} cancel={cancelTransfer} />)}
             </div>
-            <div className={`composer ${!connected ? 'inactive' : ''}`}>
-              <label className="sr-only" htmlFor="message">보낼 텍스트 또는 링크</label><textarea ref={textarea} id="message" placeholder={connected ? '텍스트나 링크를 입력하세요. 이미지도 붙여넣을 수 있어요.' : '기기 연결 후 텍스트나 링크를 입력하세요.'} value={text} maxLength={MAX_TEXT_LENGTH} disabled={!connected} onChange={event => setText(event.target.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); sendText(); } }} onPaste={event => { const pasted = Array.from(event.clipboardData.files); if (pasted.length) { event.preventDefault(); files(pasted); } }} />
-              <div className="composer-toolbar"><input ref={input} className="sr-only" type="file" id="files" multiple disabled={!connected} onChange={event => { files(Array.from(event.target.files || [])); event.target.value = ''; }} /><button className="attach-button" disabled={!connected} onClick={() => input.current?.click()}><Icon name="paperclip" size={18} />파일 첨부</button><label className="sr-only" htmlFor="files">전송할 파일 선택</label><span className="shortcut">Ctrl / ⌘ + Enter</span><button className="send-button" disabled={!connected || !text.trim()} onClick={sendText}>보내기<Icon name="arrow" size={17} /></button></div>
+            <div className={`composer ${!canSend ? 'inactive' : ''}`}>
+              <label className="sr-only" htmlFor="message">보낼 텍스트 또는 링크</label><textarea ref={textarea} id="message" placeholder={browsingArchive ? '이전 기록을 보는 중이에요. 현재 연결로 돌아가서 보내세요.' : connected ? '텍스트나 링크를 입력하세요. 이미지도 붙여넣을 수 있어요.' : '기기 연결 후 텍스트나 링크를 입력하세요.'} value={text} maxLength={MAX_TEXT_LENGTH} disabled={!canSend} onChange={event => setText(event.target.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); sendText(); } }} onPaste={event => { const pasted = Array.from(event.clipboardData.files); if (pasted.length) { event.preventDefault(); files(pasted); } }} />
+              <div className="composer-toolbar"><input ref={input} className="sr-only" type="file" id="files" multiple disabled={!canSend} onChange={event => { files(Array.from(event.target.files || [])); event.target.value = ''; }} /><button className="attach-button" disabled={!canSend} onClick={() => input.current?.click()}><Icon name="paperclip" size={18} />파일 첨부</button><label className="sr-only" htmlFor="files">전송할 파일 선택</label><span className="shortcut">Ctrl / ⌘ + Enter</span><button className="send-button" disabled={!canSend || !text.trim()} onClick={sendText}>보내기<Icon name="arrow" size={17} /></button></div>
             </div>
             <div className="transfer-footnote"><Icon name="shield" size={13} /><span>기록은 이 브라우저에 저장돼요.</span><span className="file-limit">파일당 최대 {formatBytes(config?.maxFileSize || 209715200)}</span></div>
           </div>
@@ -147,7 +192,7 @@ export function App() {
     </main>
     <footer><span>QuickDrop <span className="footer-dot">·</span> 작은 연결, 가벼운 일상.</span><span><i />두 기기에서 이 페이지를 열어두세요.</span></footer>
     {notice && <div className="toast" role="status"><Icon name="check" size={17} />{notice}</div>}
-    {dragging && <div className="drop-overlay"><Icon name="upload" size={55} /><h2>{connected ? '여기에 놓으면 바로 전송됩니다' : '다른 기기를 먼저 연결하세요'}</h2><p>파일은 연결된 기기로 안전하게 전달됩니다.</p></div>}
-    <dialog ref={dialog} onCancel={() => setHelp(false)} onClose={() => { setHelp(false); helpButton.current?.focus(); }} aria-labelledby="help-title"><div className="dialog-title"><h2 id="help-title">세 단계면 충분해요</h2><button className="icon-button" onClick={() => setHelp(false)} aria-label="사용 방법 닫기"><Icon name="close" /></button></div><ol><li><strong>두 기기에서 QuickDrop을 여세요.</strong><p>휴대폰, PC, 태블릿 모두 같은 방법으로 사용해요. PC끼리도 가능합니다.</p></li><li><strong>QR을 스캔하거나 6자리 코드를 입력하세요.</strong><p>연결됨 표시가 양쪽에 나타날 때까지 기다려주세요.</p></li><li><strong>텍스트, 링크, 파일을 보내세요.</strong><p>파일 첨부, 드래그 앤 드롭, 이미지 붙여넣기를 지원해요.</p></li></ol><div className="help-note">같은 기기에서 같은 브라우저로 다시 연결하면 기록을 불러와요. 기록과 받은 파일은 이 브라우저에 저장됩니다. 최근 10개 기기 조합, 조합당 300개 기록, 파일 합계 200MB까지 보관하며 공간이 부족하면 파일 내용부터 지워집니다. 시크릿 모드, 브라우저 데이터 삭제, 주소 변경 시에는 기록을 유지할 수 없어요. 필요한 파일은 다운로드하고 공용 기기에서는 기록 비우기를 눌러 주세요.</div>{['localhost', '127.0.0.1'].includes(location.hostname) && <p className="local-note">현재 로컬 주소로 실행 중입니다. 휴대폰에서 QR로 연결하려면 두 기기에서 접근할 수 있는 HTTPS 주소를 사용하세요.</p>}<button className="primary-button full-width" onClick={() => setHelp(false)}>시작해 볼게요</button></dialog>
+    {dragging && <div className="drop-overlay"><Icon name="upload" size={55} /><h2>{canSend ? '여기에 놓으면 바로 전송됩니다' : browsingArchive ? '현재 연결 대화방으로 돌아가세요' : '다른 기기를 먼저 연결하세요'}</h2><p>파일은 연결된 기기로 안전하게 전달됩니다.</p></div>}
+    <dialog ref={dialog} onCancel={() => setHelp(false)} onClose={() => { setHelp(false); helpButton.current?.focus(); }} aria-labelledby="help-title"><div className="dialog-title"><h2 id="help-title">세 단계면 충분해요</h2><button className="icon-button" onClick={() => setHelp(false)} aria-label="사용 방법 닫기"><Icon name="close" /></button></div><ol><li><strong>두 기기에서 QuickDrop을 여세요.</strong><p>휴대폰, PC, 태블릿 모두 같은 방법으로 사용해요. PC끼리도 가능합니다.</p></li><li><strong>QR을 스캔하거나 6자리 코드를 입력하세요.</strong><p>연결됨 표시가 양쪽에 나타날 때까지 기다려주세요.</p></li><li><strong>텍스트, 링크, 파일을 보내세요.</strong><p>파일 첨부, 드래그 앤 드롭, 이미지 붙여넣기를 지원해요.</p></li></ol><div className="help-note">이전 대화방에서 상대별 기록을 열고 이름을 붙일 수 있어요. 다른 기기와 연결했다가 돌아와도 같은 브라우저끼리 연결하면 그 상대의 기록을 불러옵니다. 대화방은 새 기기를 연결해도 자동 삭제하지 않으며, 대화방당 최근 300개 기록과 받은 파일 합계 200MB를 이 브라우저에 보관해요. 공간이 부족하면 파일 내용부터 지워집니다. 시크릿 모드, 브라우저 데이터 삭제, 주소 변경 시에는 기록을 유지할 수 없어요. 필요한 파일은 다운로드하고 공용 기기에서는 기록 비우기를 눌러 주세요.</div>{['localhost', '127.0.0.1'].includes(location.hostname) && <p className="local-note">현재 로컬 주소로 실행 중입니다. 휴대폰에서 QR로 연결하려면 두 기기에서 접근할 수 있는 HTTPS 주소를 사용하세요.</p>}<button className="primary-button full-width" onClick={() => setHelp(false)}>시작해 볼게요</button></dialog>
   </div>;
 }

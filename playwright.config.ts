@@ -19,5 +19,7 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'], baseURL: baseURL('webkit') } },
   ],
   // Each engine gets its own rate-limit budget; production protection stays on.
-  webServer: externalUrl ? undefined : Object.values(ports).map(port => ({ command: process.env.E2E_PRODUCTION ? 'npm start' : 'npx tsx server/index.ts', url: `http://127.0.0.1:${port}/api/health`, reuseExistingServer: false, env: { PORT: String(port), STUN_URL: '', ROOM_TTL: '600000', JOIN_RATE_LIMIT: '100' }, timeout: 30000 })),
+  // Database migration tests use 3103 so their extra connections do not consume
+  // the transport regression tests' 40-per-minute WebSocket budget.
+  webServer: externalUrl ? undefined : [...Object.values(ports), 3103].map(port => ({ command: process.env.E2E_PRODUCTION ? 'npm start' : 'npx tsx server/index.ts', url: `http://127.0.0.1:${port}/api/health`, reuseExistingServer: false, env: { PORT: String(port), STUN_URL: '', ROOM_TTL: '600000', JOIN_RATE_LIMIT: '100' }, timeout: 30000 })),
 });

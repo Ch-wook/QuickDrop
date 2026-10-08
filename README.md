@@ -12,6 +12,8 @@
 
 서비스 주소: **https://dropgo.up.railway.app**. 2026-10-09 연결 안정성·기기별 기록 개선본을 배포하고 Chromium·Firefox에서 공개 QR, PC 간 전송, 자동 복구와 기록·받은 파일 복원을 검증했습니다. 기존 페이지는 두 기기에서 한 번 새로고침하세요. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 새 기능과 제한은 [RELIABILITY.md](./RELIABILITY.md), 성능 개선 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
 
+상대별 ‘이전 대화방’ 목록과 이름 저장을 추가했습니다. 다른 기기와 연결했다가 돌아와도 같은 브라우저 조합의 기록을 이어가며 연결 전에도 기록을 열어볼 수 있습니다. [사용 방법·보관 범위](./HISTORY_ROOMS.md), [전체 프로젝트 정리](./PROJECT_OVERVIEW.md)
+
 별도 도메인 구매 없이 검색으로 찾아오는 방식을 준비했습니다. 한국어 검색 정보, 사이트맵, 네이버 제출 방법과 실제 제출 상태는 [SEARCH.md](./SEARCH.md)를 참고하세요. 검색 결과 노출이나 순위가 보장되는 것은 아닙니다.
 
 Node.js **22.12 이상**(개발 검증: Node 24)을 설치한 뒤:
@@ -107,7 +109,8 @@ client/
   TransferCard.tsx     텍스트·파일·이미지·진행률 UI
   peer.ts             WebSocket signaling, WebRTC lifecycle
   transfers.ts        ACK, 파일 큐, backpressure, 취소/메모리 관리
-  history.ts          기기 ID, IndexedDB 기록·파일 보관 한도
+  history.ts          기기 ID, IndexedDB 기록·파일·대화방 요약
+  HistoryRooms.tsx     이전 대화방 목록과 이름 편집
   icons.tsx           SVG 아이콘
   styles.css          데스크톱·모바일 스타일
 server/
@@ -139,7 +142,7 @@ DataChannel은 reliable/ordered 모드이며 다음 메시지를 교환합니다
 
 파일은 최대 **256KiB**씩 묶어 읽고, 전송 payload는 **16KiB** 청크로 나눕니다. 각 청크의 40-byte 헤더를 포함해 브라우저 간 메시지 크기 차이를 보수적으로 처리합니다. `bufferedAmount`가 1MiB를 넘으면 기다리고 `bufferedamountlow` 이벤트와 종료/타임아웃을 확인합니다. 수신자는 순서·총 크기를 검사하고 완성된 Blob만 다운로드 가능하게 합니다. DataChannel의 암호화·무결성·reliable transport를 사용하며 별도 애플리케이션 파일 해시는 보내지 않습니다.
 
-파일별/누적 수신 용량, 대기열 20개, 기록 300개, 활성 수신 파일 2개 제한으로 메모리 사용을 제한합니다. 완료된 수신 Blob은 브라우저 IndexedDB에도 보관되며 같은 상대와 재연결하면 복원됩니다. 최근 10개 기기 조합, 조합당 300개 기록, 파일 합계 200MiB를 보관합니다. 세션 종료는 Blob URL을 해제하고 기록 비우기는 현재 상대의 보관 자료도 삭제합니다. 전송 중 기록 비우기는 완료/실패/취소 기록만 지웁니다. 타임아웃은 60초이며 전송 재개는 지원하지 않습니다.
+파일별/누적 수신 용량, 대기열 20개, 기록 300개, 활성 수신 파일 2개 제한으로 메모리 사용을 제한합니다. 완료된 수신 Blob은 브라우저 IndexedDB에도 보관되며 같은 상대와 재연결하면 복원됩니다. 대화방당 300개 기록, 받은 파일 합계 200MiB를 보관하며 새 기기를 연결해도 기존 방을 자동 삭제하지 않습니다. 이전 대화방에서 연결 없이 기록을 열고 이름을 저장합니다. 자세한 사용 방법은 [HISTORY_ROOMS.md](./HISTORY_ROOMS.md)에 있습니다. 세션 종료는 Blob URL을 해제하고 기록 비우기는 현재 상대의 보관 자료도 삭제합니다. 전송 중 기록 비우기는 완료/실패/취소 기록만 지웁니다. 타임아웃은 60초이며 전송 재개는 지원하지 않습니다.
 
 관련 구현 기준: [MDN WebRTC data channels](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Using_data_channels), [Vite JavaScript API](https://vite.dev/guide/api-javascript).
 

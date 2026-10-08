@@ -2,11 +2,55 @@ import { isActive, MAX_HISTORY, type Transfer } from '../shared/protocol';
 
 const DATABASE = 'quickdrop-history';
 const STORE = 'pairs';
-const MAX_PAIRS = 10;
+const ROOMS = 'rooms';
 const MAX_BYTES = 200 * 1024 * 1024;
 type Pair = { id: string; updatedAt: number; items: Transfer[] };
+export type HistoryRoom = { id: string; name: string; updatedAt: number; count: number; preview: string };
+const CHANGED = 'quickdrop-history-changed';
 let volatileDeviceId: string | undefined;
 let writes: Promise<unknown> = Promise.resolve();
+
+function summary(pair: Pair, previous?: HistoryRoom): HistoryRoom {
+  const last = pair.items.at(-1);
+  return { id: pair.id, name: previous?.name || `기기 ${pair.id.split(':').at(-1)?.slice(0, 6)}`, updatedAt: pair.updatedAt,
+    count: pair.items.length, preview: (last?.kind === 'file' ? last.name : last?.text)?.slice(0, 60) || '아직 전송 기록이 없어요' };
+}
+function changed() { globalThis.dispatchEvent?.(new Event(CHANGED)); }
+export function watchHistory(listener: () => void) {
+  globalThis.addEventListener(CHANGED, listener);
+  return () => globalThis.removeEventListener(CHANGED, listener);
+}
+export async function listHistoryRooms(): Promise<HistoryRoom[]> {
+  await writes;
+  const db = await open();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(ROOMS, 'readonly');
+      const request = transaction.objectStore(ROOMS).getAll();
+      transaction.oncomplete = () => resolve((request.result as HistoryRoom[]).sort((a, b) => b.updatedAt - a.updatedAt));
+      transaction.onabort = () => reject(transaction.error);
+    });
+  } finally { db.close(); }
+}
+export function renameHistoryRoom(id: string, name: string): Promise<void> {
+  const cleaned = name.trim().slice(0, 30);
+  if (!cleaned) return Promise.reject(new Error('대화방 이름을 입력하세요.'));
+  const operation = writes.catch(() => undefined).then(async () => {
+    const db = await open();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(ROOMS, 'readwrite');
+        const store = transaction.objectStore(ROOMS); const request = store.get(id);
+        request.onsuccess = () => { if (request.result) store.put({ ...request.result, name: cleaned }); };
+        transaction.oncomplete = () => resolve();
+        transaction.onabort = () => reject(transaction.error);
+      });
+      changed();
+    } finally { db.close(); }
+  });
+  writes = operation.catch(() => undefined);
+  return operation;
+}
 
 // A browser-profile label for grouping history, not verified identity.
 // The secret resume token has a separate authentication role.
@@ -20,10 +64,17 @@ export function deviceId() {
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (!globalThis.indexedDB) { reject(new Error('Local history unavailable')); return; }
-    const request = indexedDB.open(DATABASE, 1);
+    const request = indexedDB.open(DATABASE, 2);
     let expired = false;
     const timer = setTimeout(() => { expired = true; reject(new Error('History open timeout')); }, 5000);
-    request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: 'id' });
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
+      const rooms = db.createObjectStore(ROOMS, { keyPath: 'id' });
+      // Upgrade existing device-pair records without losing texts or Blobs.
+      const cursor = request.transaction!.objectStore(STORE).openCursor();
+      cursor.onsuccess = () => { if (cursor.result) { rooms.put(summary(cursor.result.value)); cursor.result.continue(); } };
+    };
     request.onerror = () => { clearTimeout(timer); reject(request.error); };
     request.onblocked = () => { expired = true; clearTimeout(timer); reject(new Error('History database is busy')); };
     request.onsuccess = () => { clearTimeout(timer); if (expired) { request.result.close(); return; } request.result.onversionchange = () => request.result.close(); resolve(request.result); };
@@ -36,6 +87,7 @@ export class PairHistory {
   private pending?: Pair;
   private scheduled = false;
   constructor(private id: string, private warning: (message: string) => void) {}
+  remember(items: Transfer[]) { this.save(items); }
   private unavailable() {
     this.disabled = true;
     if (!this.warned) { this.warned = true; this.warning('브라우저의 기록 저장 공간을 사용할 수 없습니다. 현재 기록은 이 페이지에서만 유지됩니다.'); }
@@ -69,7 +121,7 @@ export class PairHistory {
       try {
         while (this.pending && !this.disabled) {
           const pair = this.pending; this.pending = undefined;
-          await this.store(pair);
+          await this.store(pair); changed();
         }
       } catch { this.unavailable(); }
       finally { this.pending = undefined; this.scheduled = false; }
@@ -79,20 +131,17 @@ export class PairHistory {
     const db = await open();
     try {
       await new Promise<void>((resolve, reject) => {
-        const transaction = db.transaction(STORE, 'readwrite');
+        const transaction = db.transaction([STORE, ROOMS], 'readwrite');
         const store = transaction.objectStore(STORE);
-        if (!pair.items.length) {
-          store.delete(pair.id);
-          transaction.oncomplete = () => resolve(); transaction.onabort = () => reject(transaction.error);
-          return;
-        }
+        const roomStore = transaction.objectStore(ROOMS);
+        const previous = roomStore.get(pair.id);
+        previous.onsuccess = () => roomStore.put(summary(pair, previous.result));
         const request = store.getAll();
         request.onsuccess = () => {
           try {
             const pairs = (request.result as Pair[]).filter(value => value.id !== pair.id);
             pairs.push(pair); pairs.sort((a, b) => b.updatedAt - a.updatedAt);
-            pairs.slice(MAX_PAIRS).forEach(value => store.delete(value.id));
-            const retained = pairs.slice(0, MAX_PAIRS);
+            const retained = pairs;
             let bytes = retained.reduce((total, value) => total + value.items.reduce((sum, item) => sum + (item.blob?.size || 0), 0), 0);
             // Evict old file bytes first; keep their transfer metadata.
             for (const value of [...retained].reverse()) {
