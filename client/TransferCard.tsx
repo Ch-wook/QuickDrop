@@ -8,7 +8,7 @@ export function formatBytes(bytes: number) {
   return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 const labels = { sending: '전송 중', receiving: '수신 중', confirming: '수신 확인 중', complete: '전송 완료', cancelled: '전송 취소', error: '전송 실패' };
-export const TransferCard = memo(function TransferCard({ item, copy, cancel }: { item: Transfer; copy: (value: string) => void; cancel: (id: string) => void }) {
+export const TransferCard = memo(function TransferCard({ item, copy, cancel, selected, select, selectionDisabled }: { item: Transfer; copy: (value: string) => void; cancel: (id: string) => void; selected?: boolean; select?: (id: string) => void; selectionDisabled?: boolean }) {
   const active = isActive(item.status);
   const percent = item.size ? Math.min(100, Math.floor(item.bytes / item.size * 100)) : item.status === 'complete' ? 100 : 0;
   const preview = item.url && /^(image\/jpeg|image\/png|image\/webp)$/.test(item.mime || '');
@@ -16,7 +16,7 @@ export const TransferCard = memo(function TransferCard({ item, copy, cancel }: {
     <div className="transfer-meta"><span>{item.direction === 'sent' ? '이 기기에서 보냄' : '상대 기기에서 받음'}</span><time dateTime={new Date(item.time).toISOString()}>{new Date(item.time).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></div>
     {item.kind === 'file' ? <>
       {preview && <img className="image-preview" src={item.url} alt={item.name || '수신 이미지'} loading="lazy" decoding="async" />}
-      <div className="file-row"><span className="file-icon"><Icon name={preview ? 'image' : 'file'} size={24} /></span><div className="file-info"><strong>{item.name}</strong><span>{formatBytes(item.bytes)} / {formatBytes(item.size || 0)}</span></div>
+      <div className="file-row">{select && <label className="file-selection"><input type="checkbox" checked={!!selected} disabled={selectionDisabled} onChange={() => select(item.id)} aria-label={`${item.name} 다운로드 선택`} /></label>}<span className="file-icon"><Icon name={preview ? 'image' : 'file'} size={24} /></span><div className="file-info"><strong>{item.name}</strong><span>{formatBytes(item.bytes)} / {formatBytes(item.size || 0)}</span></div>
         {active && <button className="icon-button" onClick={() => cancel(item.id)} aria-label={`${item.name} 전송 취소`}><Icon name="close" size={17} /></button>}
         {item.url && <a className="icon-button" href={item.url} download={item.name} aria-label={`${item.name} 다운로드`}><Icon name="download" /></a>}
       </div>

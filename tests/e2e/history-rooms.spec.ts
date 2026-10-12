@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { browserOptions } from './browser-options';
 
 test.use({ baseURL: 'http://127.0.0.1:3103' });
 
@@ -7,8 +8,8 @@ test('legacy room migration preserves files and more than ten device rooms', asy
   // This installed Windows WebKit cannot persist IndexedDB Blobs; still check
   // migration of file metadata and room names there.
   const storedFile = browserName !== 'webkit';
-  const context = await browser.newContext({ acceptDownloads: true });
-  const otherContext = await browser.newContext();
+  const context = await browser.newContext({ ...browserOptions(browser), acceptDownloads: true });
+  const otherContext = await browser.newContext(browserOptions(browser));
   const page = await context.newPage(); const other = await otherContext.newPage();
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   try {

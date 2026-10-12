@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import jsQR from 'jsqr';
 import { PNG } from 'pngjs';
+import { browserOptions } from './browser-options';
 
 async function send(page: Page, text: string) {
   await page.getByRole('textbox', { name: '보낼 텍스트 또는 링크' }).fill(text);
@@ -17,8 +18,8 @@ async function download(page: Page, name: string, expected: Buffer) {
 }
 
 test('real WebRTC: ping/pong, links, images, binary files, paste/drop and peer departure', async ({ browser, baseURL }, testInfo) => {
-  const aContext = await browser.newContext({ viewport: { width: 1440, height: 1100 }, acceptDownloads: true });
-  const bContext = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
+  const aContext = await browser.newContext({ ...browserOptions(browser), viewport: { width: 1440, height: 1100 }, acceptDownloads: true });
+  const bContext = await browser.newContext({ ...browserOptions(browser), viewport: { width: 390, height: 844 }, acceptDownloads: true });
   const a = await aContext.newPage(); const b = await bContext.newPage();
   const errors: string[] = [];
   for (const page of [a, b]) page.on('pageerror', error => errors.push(error.message));
@@ -102,14 +103,14 @@ test('real WebRTC: ping/pong, links, images, binary files, paste/drop and peer d
     await b.screenshot({ path: `artifacts/${testInfo.project.name}-mobile-connected.png`, fullPage: true });
     expect(await b.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
-    const c = await browser.newPage(); await c.goto(joinUrl!);
+    const c = await browser.newPage(browserOptions(browser)); await c.goto(joinUrl!);
     await expect(c.getByRole('alert')).toContainText('이미 두 기기가 연결되어 있습니다.'); await c.close();
     // Explicit departure releases the slot immediately. An unexpected browser
     // shutdown now reserves it briefly for authenticated automatic recovery.
     await b.getByRole('button', { name: '새 연결 시작' }).click();
     await bContext.close();
     await expect(a.getByText('상대 기기가 나갔습니다.', { exact: false })).toBeVisible();
-    const replacement = await browser.newPage();
+    const replacement = await browser.newPage(browserOptions(browser));
     await replacement.goto(joinUrl!); await Promise.all([connected(a), connected(replacement)]);
     await send(replacement, '다시 연결한 기기'); await expect(a.getByText('다시 연결한 기기', { exact: true })).toBeVisible();
     await replacement.close();
@@ -118,7 +119,7 @@ test('real WebRTC: ping/pong, links, images, binary files, paste/drop and peer d
 });
 
 test('manual code fallback, invalid rooms and mobile layout', async ({ browser, baseURL }, testInfo) => {
-  const a = await browser.newPage(); const b = await browser.newPage({ viewport: { width: 375, height: 812 } });
+  const a = await browser.newPage(browserOptions(browser)); const b = await browser.newPage({ ...browserOptions(browser), viewport: { width: 375, height: 812 } });
   try {
     await a.goto(baseURL!);
     test.skip(!await a.evaluate(() => typeof RTCPeerConnection !== 'undefined'), 'This installed WebKit build does not expose RTCPeerConnection; real Safari/device testing is required.');

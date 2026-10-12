@@ -1,17 +1,19 @@
 # QuickDrop 전체 프로젝트 정리
 
-최종 정리일: **2026-10-09 (Asia/Seoul)**
+최종 정리일: **2026-10-13 (Asia/Seoul)**
 
 QuickDrop은 앱 설치와 로그인 없이 두 기기를 QR 또는 6자리 코드로 연결해 텍스트·링크·사진·파일을 양방향으로 보내는 웹 서비스입니다.
 
 - 서비스: **https://dropgo.up.railway.app**
-- 짧은 접속 링크: **[da.gd/qd20](https://da.gd/qd20)**. 주소창에 직접 입력하고 신규 링크 안내가 나오면 홈페이지 주소를 누릅니다. [사용 방법](./README.md#짧은-주소로-바로-사용하기), [등록 확인](./SHORT_LINK.md)
+- 짧은 접속 링크: **[da.gd/quickdrop](https://da.gd/quickdrop)**. 숫자 없이 서비스 이름을 입력합니다. 신규 링크 안내가 나오면 홈페이지 주소를 누릅니다. [사용 방법](./README.md#짧은-주소로-바로-사용하기), [등록 확인](./SHORT_LINK.md)
 - GitHub: [Ch-wook/QuickDrop](https://github.com/Ch-wook/QuickDrop), `main`
 - 배포: Railway `quickdrop` / `production`, GitHub 푸시 자동 배포
-- 최신 기능 변경: 이전 상대별 대화방 목록·이름 저장·연결 전 기록 열람, 다른 상대와 연결 중에도 과거 기록 보존. [대화방 구성](./HISTORY_ROOMS.md), [연결 복구](./RELIABILITY.md)
+- 최신 기능 변경: 받은 파일 **선택·전체 ZIP 다운로드**, 준비 진행률·취소·다시 저장. 이전 상대별 대화방에서도 재연결 없이 다운로드합니다. [다운로드 안내](./BULK_DOWNLOADS.md), [대화방 구성](./HISTORY_ROOMS.md), [연결 복구](./RELIABILITY.md)
 - 상세 운영 확인: [DEPLOYMENT.md](./DEPLOYMENT.md), [VALIDATION.md](./VALIDATION.md)
 
 ## 현재 운영 상태
+
+2026-10-13 선택·전체 ZIP 다운로드 변경의 단위·통합 **99개**, 운영 빌드 E2E **19개 통과/8개 skip**, 빌드·타입 검사를 확인했습니다. ZIP 해독 바이트·파일명·과거 방 다운로드·선택 분리·삭제·모바일 너비를 검사했습니다. Firefox는 설치된 Windows 검사 도구의 CSP 우회 옵션을 사용했으며 운영 CSP는 유지합니다. 최신 공개 배포 식별자와 서버 검사는 [DEPLOYMENT.md](./DEPLOYMENT.md), 검사 조건은 [VALIDATION.md](./VALIDATION.md)에 있습니다. 다음 문단은 앞선 대화방 버전의 배포 이력입니다.
 
 대화방 목록·이름 저장·연결 전 기록 열람 코드 `9abc725`의 GitHub 푸시·Railway 배포 성공과 공개 자산 일치를 확인했습니다. 로컬 단위·통합 **92개**, 운영 빌드 E2E **17개 통과/7개 skip**, 공개 Chromium·Firefox E2E **4개 통과**입니다. 상세 결과는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 있습니다. 아래는 앞선 연결 복구 버전의 배포 확인입니다.
 
@@ -25,14 +27,14 @@ QuickDrop은 앱 설치와 로그인 없이 두 기기를 QR 또는 6자리 코�
 | 수신 보관·예약 합계 | 운영 API에서 209,715,200바이트(200MiB) 확인 |
 | 구현·배포·GitHub 연동 | 완료; `main` 푸시 자동 배포 확인 |
 | 검색 접근 | 검색용 설정 배포 및 네이버 수집 알림 접수 완료; 실제 노출은 미확인 |
-| 짧은 접속 | `da.gd/qd20` 실제 등록·홈페이지 연결 확인; 신규 링크 안내에서 목적지 클릭. Railway 도메인은 유지 |
+| 짧은 접속 | `da.gd/quickdrop` 실제 등록·모바일 크기 브라우저로 홈페이지 연결 확인; 신규 링크 안내에서 목적지 클릭. Railway 도메인은 유지 |
 
 ## 사용 흐름
 
 1. 두 PC 또는 PC·휴대폰에서 서비스 주소를 엽니다.
 2. 휴대폰 카메라로 PC 화면의 QR을 스캔합니다. 두 기기에서 사이트를 열고 6자리 코드로 연결할 수도 있습니다.
 3. 연결 완료 후 어느 기기에서든 텍스트를 보내거나 파일을 선택합니다.
-4. 받은 파일은 다운로드합니다. 연결 중에는 두 기기의 페이지를 열어둡니다.
+4. 받은 파일 앞의 체크박스로 여러 개를 고르고 ‘선택 다운로드’, 모두 받으려면 ‘전체 다운로드’를 누릅니다. ZIP 하나로 저장되며 개별 다운로드도 가능합니다. 연결 중에는 두 기기의 페이지를 열어둡니다.
 5. ‘이전 대화방’에서 과거 상대의 기록을 다시 열고 이름을 저장합니다. 다른 상대와 연결했다가 같은 브라우저끼리 다시 연결하면 해당 방을 이어갑니다.
 
 과거 휴대폰 접속 거부는 QR이 PC의 `localhost`를 가리키던 문제였습니다. 이제 공개 HTTPS 주소로 QR을 생성하며 사용자가 휴대폰 연결 성공을 알려왔습니다. 휴대폰 OS별 파일 저장·백그라운드 동작까지 확인한 것은 아닙니다.
@@ -43,7 +45,7 @@ QuickDrop은 앱 설치와 로그인 없이 두 기기를 QR 또는 6자리 코�
 |---|---|
 | 연결 | 임시 Room, QR, 6자리 코드, 최대 두 기기, HTTPS/WSS |
 | 전송 | 텍스트·링크·이미지·일반 파일, 양방향 WebRTC DataChannel |
-| 편의 기능 | 다중 파일 선택, 드래그·드롭, 이미지·파일 붙여넣기, 미리보기, 다운로드 |
+| 편의 기능 | 다중 파일 전송, 드래그·드롭, 이미지·파일 붙여넣기, 미리보기, 개별·선택·전체 ZIP 다운로드 |
 | 상태 관리 | 진행률, 수신 확인, 취소, 자동 재접속·재협상, 기기별 대화방 목록·이름·복원·삭제 |
 | 화면 | 한국어 반응형 UI, 키보드 조작, 모바일 레이아웃 |
 | 운영 | Docker 빌드, healthcheck, GitHub 자동 배포, 정적 파일 압축·캐시 |
@@ -70,7 +72,7 @@ flowchart LR
 | `tests/` | 단위·통합 검사와 실제 브라우저 전송 검사 |
 | `Dockerfile`, `railway.json`, `compose.yaml` | 빌드·실행·배포 구성 |
 
-기술 구성: React 19, TypeScript, Vite, Node.js 24, Express 5, ws, Zod, Vitest, Playwright. 파일별 역할과 API는 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)에 정리했습니다.
+기술 구성: React 19, TypeScript, Vite, Node.js 24, Express 5, ws, Zod, fflate, Vitest, Playwright. ZIP은 256KiB씩 읽어 브라우저에서 생성하며 다운로드 모듈은 버튼을 누를 때 불러옵니다. 파일별 역할과 API는 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)에 정리했습니다.
 
 ## 용량과 보호 장치
 
@@ -83,6 +85,8 @@ flowchart LR
 - QR·연결 코드를 아는 사람이 참가할 수 있습니다. 개인 참가 URL은 검색 제외 헤더를 반환하고 사이트맵·검색 제출에서 제외합니다.
 
 ## 최적화 및 검증
+
+ZIP 모듈은 별도 **6.37kB(gzip 3.10kB)** 자산으로 분리해 첫 접속에는 불러오지 않습니다. 파일을 재압축하지 않고 256KiB씩 처리해 준비 중 진행률·취소를 제공합니다. 추가 후 초기 JS는 365.19kB(gzip 111.90kB)입니다. 배포 확인 스크립트는 초기 자산과 지연 로딩되는 QR·ZIP 자산의 내용·해시·압축·캐시까지 비교합니다. 로컬 최신 검사 **99개 + 브라우저 19개**의 범위와 Firefox·WebKit 제약은 [VALIDATION.md](./VALIDATION.md)에 기록합니다.
 
 QR 라이브러리 지연 로딩으로 초기 JS gzip 예상 크기를 115.98kB에서 약 106.79kB로 줄였습니다. 파일 읽기를 묶고 중간 복사를 줄였으며, Brotli/gzip 사전 압축과 해시 자산 캐시를 적용했습니다. 상세 수치와 측정 범위는 [OPTIMIZATION.md](./OPTIMIZATION.md)를 참고하세요.
 

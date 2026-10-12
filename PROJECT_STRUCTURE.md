@@ -18,6 +18,7 @@ QuickDrop은 웹사이트와 QR 또는 연결 코드로 **동등한 두 기기**
 | 실제 전송 | WebRTC RTCDataChannel | 암호화된 텍스트·파일 양방향 전송 |
 | 입력 검증 | Zod | signaling 및 transfer 메시지 schema |
 | QR | qrcode | HTTPS 참가 링크 이미지 생성 |
+| 일괄 다운로드 | fflate | 브라우저에서 받은 파일의 ZIP 생성, 지연 로딩 |
 | 검증 | Vitest, Playwright, jsQR, pngjs | 단위·통합·실제 브라우저·QR 해독 테스트 |
 | 배포 | Docker, Compose, Railway 설정 | 단일 Node 프로세스 운영 |
 | 휴대폰 개발 확인 | Cloudflare Quick Tunnel | 임시 HTTPS/WSS 접속 주소 |
@@ -34,6 +35,9 @@ QuickDrop/
 │  ├─ history.ts               기기 ID, IndexedDB 기록·Blob, 보관 한도
 │  ├─ HistoryRooms.tsx          이전 상대별 대화방 목록, 이름 편집
 │  ├─ TransferCard.tsx         텍스트/링크/이미지/파일 기록 카드
+│  ├─ TransferHistory.tsx      받은 파일 선택·전체 다운로드, 진행률·취소·재저장
+│  ├─ downloads.ts            다운로드 가능한 완료 수신 파일 판별
+│  ├─ download-zip.ts         청크 ZIP 생성, 안전한 중복 파일명, 용량·취소 검사
 │  ├─ icons.tsx                프로젝트 내부 SVG 아이콘
 │  └─ styles.css               반응형 스타일과 상태별 표현
 ├─ server/
@@ -51,13 +55,14 @@ QuickDrop/
 │  ├─ mobile-health.mjs        로컬 세션 일치 및 공개 HTTPS 상태 검사
 │  ├─ mobile-status.mjs        npm run mobile:status 명령
 │  ├─ compress-assets.mjs      JS/CSS Brotli/gzip 사전 압축
-│  ├─ verify-deployment.mjs    공개 서버와 로컬 빌드 해시·내용·캐시 비교
+│  ├─ verify-deployment.mjs    초기·지연 로딩 자산의 공개/로컬 해시·내용·캐시 비교
 │  ├─ search-submit.mjs        공개 소유 증명 확인 후 네이버 IndexNow에 홈페이지 제출
 │  └─ cloudflared-release.json 고정된 공식 도구 버전과 SHA-256
 ├─ tests/
 │  ├─ rooms.test.ts            Room 수명, 2 Peer 제한, rate limit
 │  ├─ protocol.test.ts         메시지, URL, 파일명, chunk 조립
 │  ├─ transfers.test.ts        전송 상태/ACK/취소/용량/타임아웃
+│  ├─ downloads.test.ts       ZIP 해독·바이트·한글·중복·빈 파일·청크·취소 검사
 │  ├─ server.test.ts           실제 HTTP/WS, origin, TTL, canonical URL
 │  ├─ ice.test.ts              TURN 인증 만료·서명·독립성·비밀키 비노출
 │  ├─ peer.test.ts             인증 갱신·타임아웃·종료 후 비동기 처리
@@ -67,7 +72,10 @@ QuickDrop/
 │  └─ e2e/
 │     ├─ quickdrop.spec.ts     같은 엔진 두 컨텍스트의 전송 전체 흐름
 │     ├─ interoperability.spec.ts Chromium ↔ Firefox 실제 전송
-│     └─ mobile.spec.ts        공개 HTTPS QR → WSS → WebRTC 전송
+│     ├─ mobile.spec.ts        공개 HTTPS QR → WSS → WebRTC 전송
+│     ├─ stability.spec.ts     자동 복구, 파일 전송·ZIP, 대화방 재접속·삭제
+│     ├─ history-rooms.spec.ts 이전 DB 마이그레이션과 10개 초과 대화방
+│     └─ downloads.spec.ts     이전 대화방의 선택·전체 ZIP, 취소·분리·모바일
 ├─ public/
 │  ├─ favicon.svg
 │  ├─ robots.txt              검색 수집 안내, API/WS 제외
@@ -91,6 +99,8 @@ QuickDrop/
 ├─ DEPLOYMENT.md              실제 운영 주소, 배포·검증·복구
 ├─ OPTIMIZATION.md            성능 측정과 최적화 기록
 ├─ SEARCH.md                  무료 검색 접근 구성·제출 방법과 상태
+├─ SHORT_LINK.md              기억하기 쉬운 무료 접속 링크 등록·확인
+├─ BULK_DOWNLOADS.md          여러 받은 파일을 ZIP으로 저장하는 사용·구현 안내
 └─ VALIDATION.md              실제 검증 결과와 미검증 범위
 ```
 

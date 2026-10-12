@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
@@ -10,8 +10,10 @@ try {
   const base = new URL(value);
   if (base.protocol !== 'https:' || base.username || base.password || base.pathname !== '/' || base.search || base.hash) throw new Error('Provide a plain HTTPS origin.');
   const localHtml = await readFile('dist/client/index.html', 'utf8');
-  const assets = [...localHtml.matchAll(/(?:src|href)="(\/assets\/[^"<>]+\.(?:js|css))"/g)].map(match => match[1]);
-  if (!assets.length) throw new Error('Build assets were not found. Run npm run build first.');
+  const entryAssets = new Set([...localHtml.matchAll(/(?:src|href)="(\/assets\/[^"<>]+\.(?:js|css))"/g)].map(match => match[1]));
+  if (!entryAssets.size) throw new Error('Build assets were not found. Run npm run build first.');
+  // Lazy QR/ZIP modules must also exist and match this release's build.
+  const assets = new Set([...entryAssets, ...(await readdir('dist/client/assets')).filter(name => /\.(js|css)$/.test(name)).map(name => `/assets/${name}`)]);
   async function get(url, options = {}) {
     const response = await fetch(new URL(url, base), { redirect: 'error', signal: AbortSignal.timeout(15000), ...options });
     if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
@@ -25,7 +27,7 @@ try {
   const document = await get('/');
   const remoteHtml = await document.text();
   for (const asset of assets) {
-    if (!remoteHtml.includes(`"${asset}"`)) throw new Error(`The public server is still serving a different build. Expected ${asset}.`);
+    if (entryAssets.has(asset) && !remoteHtml.includes(`"${asset}"`)) throw new Error(`The public server is still serving a different build. Expected ${asset}.`);
     const relative = asset.slice(1);
     if (!relative.startsWith('assets/') || relative.includes('..')) throw new Error('Invalid build asset path.');
     const source = await readFile(path.join('dist/client', relative));

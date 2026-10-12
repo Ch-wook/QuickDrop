@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 const externalUrl = process.env.E2E_BASE_URL;
+// Opt-in only: installed Windows Firefox automation stalls on existing and new
+// CSP pages. Keep production CSP on; Chromium checks it without this workaround.
+const firefoxCspWorkaround = process.env.E2E_FIREFOX_CSP_WORKAROUND === '1';
 const ports = { chromium: 3100, firefox: 3101, webkit: 3102 };
 const baseURL = (name: keyof typeof ports) => externalUrl || `http://127.0.0.1:${ports[name]}`;
 
@@ -15,7 +18,7 @@ export default defineConfig({
   use: { baseURL: externalUrl || 'http://127.0.0.1:3100', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'], baseURL: baseURL('chromium') } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'], baseURL: baseURL('firefox') } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'], baseURL: baseURL('firefox'), bypassCSP: firefoxCspWorkaround } },
     { name: 'webkit', use: { ...devices['Desktop Safari'], baseURL: baseURL('webkit') } },
   ],
   // Each engine gets its own rate-limit budget; production protection stays on.

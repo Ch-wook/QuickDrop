@@ -6,43 +6,45 @@
 
 ## 짧은 주소로 바로 사용하기
 
-**접속 링크: [da.gd/qd20](https://da.gd/qd20)**
+**접속 링크: [da.gd/quickdrop](https://da.gd/quickdrop)** — `da.gd/` 뒤에 서비스 이름 `quickdrop`을 그대로 입력합니다. 숫자는 없습니다.
 
 브라우저 **주소창**에 아래 주소를 입력하고 Enter를 누르세요. 모두 소문자입니다.
 
 ```text
-da.gd/qd20
+da.gd/quickdrop
 ```
 
-2026-10-09에 실제 등록한 짧은 접속 링크입니다. 별도 도메인 구매나 가입 없이 사용할 수 있습니다. QuickDrop 홈페이지 **https://dropgo.up.railway.app/** 로 연결됩니다.
+2026-10-12에 실제 등록하고 모바일 크기의 브라우저에서 접속을 확인한 링크입니다. 별도 도메인 구매나 가입 없이 사용할 수 있습니다. QuickDrop 홈페이지 **https://dropgo.up.railway.app/** 로 연결됩니다. 이전 `da.gd/qd20` 주소도 같은 서비스를 가리킵니다.
 
 새로 만든 링크에는 da.gd의 보안 안내 화면이 나타날 수 있습니다. **`https://dropgo.up.railway.app/` 주소를 눌러** QuickDrop으로 이동하세요. 접속 후 주소창에 원래 서비스 주소가 표시되며, 전송 기록도 기존 주소의 같은 브라우저에 이어서 저장됩니다. 한 번 열고 북마크나 홈 화면 바로가기로 저장하면 다음부터 입력 없이 열 수 있습니다.
 
 ### PC·휴대폰 또는 PC·PC 연결
 
-1. 첫 번째 기기에서 `da.gd/qd20`으로 QuickDrop을 엽니다.
+1. 첫 번째 기기에서 `da.gd/quickdrop`으로 QuickDrop을 엽니다.
 2. 휴대폰은 첫 기기 화면의 **QR 코드**를 스캔해 연결합니다. PC끼리 연결할 때는 두 번째 PC에서도 짧은 주소를 열고 첫 PC의 **6자리 연결 코드**를 입력합니다.
 3. 양쪽에 **연결됨** 표시가 나타나면 자료를 보냅니다. 텍스트·링크는 입력 후 ‘보내기’, 파일은 ‘파일 첨부’ 또는 드래그·드롭으로 전송합니다. 파일당 최대 **200MB**를 지원합니다(실제 제한은 200MiB = 209,715,200바이트).
-4. 받은 파일의 다운로드 버튼을 눌러 저장합니다. 전송하는 동안 양쪽 기기의 페이지를 열어두세요.
+4. 받은 파일 하나는 옆의 다운로드 버튼으로 저장합니다. 여러 개는 파일 앞의 **체크박스**를 선택한 뒤 **‘선택 다운로드’**, 모두 받으려면 **‘전체 다운로드’**를 누릅니다. 선택한 파일이 **ZIP 하나**로 내려받아집니다. 자동으로 저장되지 않으면 **‘ZIP 다시 저장’**을 누르세요. 전송하는 동안 양쪽 기기의 페이지를 열어두세요.
 5. **‘이전 대화방’**에서 상대별 이름과 전송 내역을 확인합니다. 다른 기기와 연결했다가 같은 브라우저끼리 다시 연결해도 해당 상대의 기록을 불러옵니다. 방 이름은 입력 후 ‘이름 저장’을 누릅니다.
 
 기록은 브라우저에 방당 최대 300개, 받은 파일 내용은 전체 방을 합쳐 200MiB까지 보관합니다. 사이트 데이터 삭제·시크릿 모드 종료·브라우저 저장 공간 정리로 기록이 사라질 수 있으니 중요한 파일은 다운로드하세요. 자세한 대화방 동작은 [HISTORY_ROOMS.md](./HISTORY_ROOMS.md)에 있습니다.
 
+ZIP 다운로드는 **현재 보고 있는 대화방의 전송이 완료된 받은 파일** 중 내용이 남아 있는 파일에 적용됩니다. 이전 대화방에서도 재연결 없이 사용할 수 있습니다. 같은 파일명은 ZIP 안에서 `사진 (2).jpg`처럼 구분하므로 덮어쓰지 않습니다. ZIP 준비 진행률과 취소 버튼을 제공하며, 파일을 서버에 업로드하지 않습니다. [여러 파일 다운로드 안내](./BULK_DOWNLOADS.md)
+
 ### 짧은 주소가 열리지 않을 때
 
 - 원래 주소 [dropgo.up.railway.app](https://dropgo.up.railway.app/)으로 바로 접속합니다.
-- `is.gd/qd200`은 발급 예시였으며 현재 사용할 주소는 **`da.gd/qd20`**입니다. is.gd 등록 요청은 `Error, database insert failed`로 실패해 da.gd로 발급했습니다.
+- 현재 안내 주소는 **`da.gd/quickdrop`**입니다. `is.gd/qd200` 등록은 실패했으며 사용할 링크가 아닙니다.
 - 단축 주소는 홈페이지를 여는 입구입니다. 상대 연결에는 QuickDrop 화면의 QR·6자리 코드를 사용합니다. 짧은 주소를 다시 발급하거나 기존 Room의 비밀 참가 링크를 등록할 필요가 없습니다.
 
 발급·접속 확인과 운영 시 주의할 사항은 [SHORT_LINK.md](./SHORT_LINK.md)에 정리했습니다. 개발 환경 실행 방법은 아래 ‘실행’을 참고하세요.
 
-**전체 프로젝트 정리:** [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md). 서비스 기능, 기술·폴더 구성, 200MiB 제한, 최적화, 운영·검색 설정, 검증 결과와 남은 작업을 한 문서에서 볼 수 있습니다. 2026-10-07 운영 서버와 실제 제한값을 다시 확인했습니다.
+**전체 프로젝트 정리:** [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md). 서비스 기능, 기술·폴더 구성, 선택·전체 다운로드, 200MiB 제한, 최적화, 운영·검색 설정, 검증 결과와 남은 작업을 한 문서에서 볼 수 있습니다.
 
 ## 실행
 
 전체 프로젝트 요약은 [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md), 구현 현황과 남은 작업은 [PROJECT_STATUS.md](./PROJECT_STATUS.md), 파일·API 구성은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), 검사 결과는 [VALIDATION.md](./VALIDATION.md)를 참고하세요.
 
-서비스 주소: **https://dropgo.up.railway.app**. 2026-10-09 대화방 목록·이름 저장 추가 변경을 배포하고 Chromium·Firefox 공개 검사 4개로 QR, PC 간 전송, 자동 복구, 이름 저장과 연결 전 기록·받은 파일 복원을 검증했습니다. 기존 페이지는 두 기기에서 한 번 새로고침하세요. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 새 기능과 제한은 [RELIABILITY.md](./RELIABILITY.md), 성능 개선 수치는 [OPTIMIZATION.md](./OPTIMIZATION.md)에 있습니다.
+서비스 주소: **https://dropgo.up.railway.app**. 최신 화면은 받은 파일의 선택·전체 ZIP 다운로드와 상대별 대화방을 지원합니다. 기존에 열린 페이지는 **두 기기에서 한 번 새로고침**하세요. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 다운로드 방법은 [BULK_DOWNLOADS.md](./BULK_DOWNLOADS.md), 연결과 보관 범위는 [RELIABILITY.md](./RELIABILITY.md), 검사 환경·결과는 [VALIDATION.md](./VALIDATION.md)에 있습니다.
 
 상대별 ‘이전 대화방’ 목록과 이름 저장을 추가했습니다. 다른 기기와 연결했다가 돌아와도 같은 브라우저 조합의 기록을 이어가며 연결 전에도 기록을 열어볼 수 있습니다. [사용 방법·보관 범위](./HISTORY_ROOMS.md), [전체 프로젝트 정리](./PROJECT_OVERVIEW.md)
 
@@ -96,6 +98,8 @@ production 빌드 후 공식 cloudflared를 SHA-256 검증하여 준비하고, �
 
 ## 구현한 기능
 
+2026-10-12: 받은 파일 선택·전체 ZIP 다운로드, 진행률·취소·재저장 링크와 기억하기 쉬운 `da.gd/quickdrop` 접속 링크를 추가했습니다. [다운로드 안내](./BULK_DOWNLOADS.md)
+
 2026-10-09: 정상 전송 연결을 유지하는 신호 서버 재접속, 양쪽 채널 자동 재협상, PC끼리 연결 검증, 같은 기기 조합의 기록·받은 파일 복원을 추가했습니다. 저장 방식·삭제·백그라운드 제한은 [RELIABILITY.md](./RELIABILITY.md)에 정리했습니다.
 
 - 임시 Room 자동 생성, QR, 6자리 코드 fallback, 최대 2 Peer
@@ -103,6 +107,7 @@ production 빌드 후 공식 cloudflared를 SHA-256 검증하여 준비하고, �
 - TEXT/LINK 자동 판별, 텍스트 복사, HTTP(S) 링크 새 탭 열기
 - 파일 선택, 다중 파일 대기열, 드래그 앤 드롭, 클립보드 이미지/파일 붙여넣기
 - JPEG/PNG/WebP 미리보기와 모든 파일 형식의 Blob 다운로드
+- 받은 파일 체크박스 선택·전체 ZIP 다운로드, 중복 파일명 보존, 준비 진행률·취소·재저장
 - 양방향 파일 청크 전송, 양쪽 진행률, 수신 확인 ACK, 취소, 오류/타임아웃 처리
 - 기기 조합별 IndexedDB 기록·받은 파일 복원, 기록 비우기와 Blob URL 해제
 - 대기 Room TTL, 명시적 퇴장, 신호 단절 후 120초 재접속 유예, WebSocket heartbeat
@@ -117,6 +122,7 @@ production 빌드 후 공식 cloudflared를 SHA-256 검증하여 준비하고, �
 - **Node.js + Express + ws**: 정적 파일, Room API와 WebSocket을 단일 프로세스로 제공
 - **네이티브 WebRTC RTCDataChannel**: 양방향 암호화된 실시간 데이터 전송
 - **Zod**: 클라이언트/서버 공통 메시지 타입과 런타임 검증
+- **fflate**: 필요할 때만 불러오는 브라우저 ZIP 생성; 파일 내용은 서버에 보내지 않음
 - **Vitest + Playwright**: 단위·통합 테스트와 실제 브라우저 E2E
 - 서버 DB, 계정 시스템, 클라우드 스토리지 없음; 기록은 브라우저 IndexedDB에 저장
 

@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test';
+import { browserOptions } from './browser-options';
 import jsQR from 'jsqr';
 import { PNG } from 'pngjs';
 import { readFile } from 'node:fs/promises';
 
 test('public HTTPS QR opens through the tunnel and connects two peers with WSS and WebRTC', async ({ browser, baseURL }, testInfo) => {
   expect(baseURL).toMatch(/^https:\/\//);
-  const a = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
-  const b = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const a = await browser.newPage({ ...browserOptions(browser), viewport: { width: 1440, height: 1050 } });
+  const b = await browser.newPage({ ...browserOptions(browser), viewport: { width: 390, height: 844 } });
   const sockets: string[] = [];
   for (const page of [a, b]) page.on('websocket', socket => { if (socket.url().endsWith('/ws')) sockets.push(socket.url()); });
   try {

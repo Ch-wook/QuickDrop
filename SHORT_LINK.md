@@ -1,18 +1,20 @@
 # QuickDrop 짧은 접속 링크
 
-등록·확인일: **2026-10-09 (Asia/Seoul)**
+현재 안내 링크 등록·확인일: **2026-10-12 (Asia/Seoul)**
 
 | 항목 | 값 |
 |---|---|
-| 직접 입력할 주소 | **`da.gd/qd20`** |
-| HTTPS 링크 | **https://da.gd/qd20** |
+| 직접 입력할 주소 | **`da.gd/quickdrop`** |
+| HTTPS 링크 | **https://da.gd/quickdrop** |
 | 이동 대상 | **https://dropgo.up.railway.app/** |
 | 등록 비용 | 별도 도메인 구매·계정 가입·유료 결제 없이 발급 |
 | 용도 | QuickDrop 홈페이지 접속 |
 
+기억하는 방법은 **`da.gd/` + 서비스 이름 `quickdrop`** 입니다. 숫자가 없어 이전 `qd20` 별칭보다 이름을 떠올려 입력할 수 있습니다. 기존 `da.gd/qd20` 링크를 삭제하거나 목적지를 바꾸지 않았습니다.
+
 ## 사용 방법
 
-브라우저 주소창에 `da.gd/qd20`을 입력합니다. 새로 만든 링크에 대한 보안 안내가 나오면 **`https://dropgo.up.railway.app/`** 을 눌러 이동합니다. 이 안내는 da.gd의 신규 링크 처리 정책이며 QuickDrop 로그인이나 결제 화면이 아닙니다. [공식 홈페이지](https://da.gd/), [공식 구현의 신규 링크 안내](https://github.com/dagd/dagd/blob/master/src/applications/shorten/DaGdShortenController.php)
+브라우저 주소창에 `da.gd/quickdrop`을 입력합니다. 새로 만든 링크에 대한 보안 안내가 나오면 **`https://dropgo.up.railway.app/`** 을 눌러 이동합니다. 이 안내는 da.gd의 신규 링크 처리 정책이며 QuickDrop 로그인이나 결제 화면이 아닙니다. [공식 홈페이지](https://da.gd/), [공식 구현의 신규 링크 안내](https://github.com/dagd/dagd/blob/master/src/applications/shorten/DaGdShortenController.php)
 
 첫 기기의 QuickDrop 화면에서 QR을 휴대폰으로 스캔하거나, 다른 PC에서도 홈페이지를 열고 6자리 코드를 입력합니다. 자료 전송과 대화방 사용 방법은 [README.md](./README.md#짧은-주소로-바로-사용하기)에 있습니다.
 
@@ -20,11 +22,17 @@
 
 ## 발급과 확인
 
+- 2026-10-12 da.gd 공식 API에 `quickdrop` 별칭과 공개 홈페이지 주소를 제출했고 **HTTP 200, `https://da.gd/quickdrop`**을 받았습니다. [공식 도움말](https://da.gd/help)
+- HTML 접속은 신규 링크 안내 **HTTP 200**, 목적지 링크가 기존 홈페이지와 일치합니다. `Accept: text/plain` 접속은 **HTTP 302**이며 `Location`은 `https://dropgo.up.railway.app/`입니다.
+- 실제 Chromium의 **393×852 모바일 크기 화면**에서 새 주소 → 안내의 목적지 클릭 → QuickDrop 화면·6자리 연결 코드 표시를 확인했습니다. 최종 origin은 기존 운영 주소와 일치하며 기존 브라우저 기록을 보관하는 주소가 바뀌지 않습니다. 확인 이미지는 Git 제외 `artifacts/short-link-quickdrop-mobile.png`입니다.
+
+### 이전 링크 등록 이력 (2026-10-09)
+
 - 요청한 `is.gd/qd200`은 공식 API의 GET·POST 등록 요청에서 `Error, database insert failed`를 반환했고 직접 접속도 404였습니다. 이름을 바꾼 요청에도 같은 오류가 나타났습니다. 따라서 발급 완료 링크로 안내하지 않습니다. [is.gd 공식 API](https://is.gd/apishorteningreference.php)
 - da.gd 공식 단축 API로 `qd20` 별칭을 등록했고 응답은 **HTTP 200, `https://da.gd/qd20`** 이었습니다. [공식 도움말](https://da.gd/help)
 - 등록한 짧은 주소의 HTML 보안 안내가 **HTTP 200**이며 실제 홈페이지를 가리키는 링크가 있음을 확인했습니다. 이동 대상 홈페이지와 `/api/health`도 **HTTP 200**이며 정상입니다.
 - 실제 Chromium 브라우저의 **393×852 모바일 화면**에서 짧은 링크 → 신규 링크 안내의 목적지 클릭 → QuickDrop 화면과 6자리 연결 코드 표시를 확인했습니다. 최종 origin은 기존 운영 주소와 일치합니다. 이미지 확인 파일은 Git 제외 `artifacts/short-link-mobile.png`입니다.
-- `da.gd/qd200`도 등록 응답은 받았지만 실제 접속 확인에서 404가 나와 현재 안내 주소로 사용하지 않습니다. README에는 접속이 확인된 `da.gd/qd20`만 빠른 접속 주소로 표시합니다.
+- `da.gd/qd200`도 등록 응답은 받았지만 실제 접속 확인에서 404가 나와 안내 주소로 사용하지 않았습니다. 당시 `qd20`으로 안내했으며, 현재 README의 기본 주소는 이름을 기억하기 쉬운 **`da.gd/quickdrop`**입니다.
 
 보안 안내가 표시되는 시점의 동작을 설명하는 것으로, 즉시 자동 리다이렉트나 안내 화면의 종료 시점을 보장하지 않습니다. 원래 주소를 표시하는 화면에서 목적지 링크를 누르면 QuickDrop을 사용할 수 있습니다.
 

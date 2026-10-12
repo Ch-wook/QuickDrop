@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { MAX_TEXT_LENGTH, type PublicConfig, type RoomInfo, type Transfer } from '../shared/protocol';
 import { PeerSession, type ConnectionStatus } from './peer';
 import { Icon } from './icons';
-import { formatBytes, TransferCard } from './TransferCard';
+import { formatBytes } from './TransferCard';
+import { TransferHistory } from './TransferHistory';
 import { connectionAccess } from '../shared/connection-url';
 import { listHistoryRooms, PairHistory, renameHistoryRoom, watchHistory, type HistoryRoom } from './history';
 import { HistoryRooms } from './HistoryRooms';
@@ -177,9 +178,9 @@ export function App() {
             {browsingArchive && <div className="archive-banner" role="note"><strong>{selectedRoom?.name || '이전 대화방'} 기록을 보고 있어요.</strong><p>다시 보내려면 같은 기기와 QR 또는 코드로 연결하세요.</p><button onClick={() => selectRoom()}>현재 연결로 돌아가기 <Icon name="arrow" size={14} /></button></div>}
             {error && <div className="error-banner" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="알림 닫기"><Icon name="close" size={15} /></button></div>}
             {historyWarning && <div className="error-banner" role="note">{historyWarning}</div>}
-            <div className="history" aria-label="전송 기록" aria-live="polite" aria-relevant="additions">
-              {archiveLoading ? <div className="archive-loading" role="status">기록을 불러오고 있어요.</div> : visibleItems.length === 0 ? <div className="empty-state"><div className="empty-illustration"><div className="orbit" /><div className="floating-small"><Icon name="image" size={22} /></div><div className="floating-file"><Icon name="file" size={38} /></div><div className="floating-send"><Icon name="send" size={21} /></div></div><h3>{browsingArchive ? '저장된 기록이 없어요' : connected ? '첫 번째 자료를 보내보세요' : '옮기고 싶은 것, 무엇이든.'}</h3><p>링크를 붙여넣거나 파일을 끌어다 놓으세요.<br />자료는 연결된 기기로 바로 전달됩니다.</p><div className="type-chips"><span>텍스트</span><span>링크</span><span>이미지</span><span>파일</span></div></div> : visibleItems.map(item => <TransferCard key={item.id} item={item} copy={copy} cancel={cancelTransfer} />)}
-            </div>
+            <TransferHistory key={`${generation.current}:${browsingArchive ? selectedPairId : activePairId || 'waiting'}:${archiveRevision}`} items={visibleItems} copy={copy} cancel={cancelTransfer}>
+              {archiveLoading ? <div className="archive-loading" role="status">기록을 불러오고 있어요.</div> : visibleItems.length === 0 ? <div className="empty-state"><div className="empty-illustration"><div className="orbit" /><div className="floating-small"><Icon name="image" size={22} /></div><div className="floating-file"><Icon name="file" size={38} /></div><div className="floating-send"><Icon name="send" size={21} /></div></div><h3>{browsingArchive ? '저장된 기록이 없어요' : connected ? '첫 번째 자료를 보내보세요' : '옮기고 싶은 것, 무엇이든.'}</h3><p>링크를 붙여넣거나 파일을 끌어다 놓으세요.<br />자료는 연결된 기기로 바로 전달됩니다.</p><div className="type-chips"><span>텍스트</span><span>링크</span><span>이미지</span><span>파일</span></div></div> : null}
+            </TransferHistory>
             <div className={`composer ${!canSend ? 'inactive' : ''}`}>
               <label className="sr-only" htmlFor="message">보낼 텍스트 또는 링크</label><textarea ref={textarea} id="message" placeholder={browsingArchive ? '이전 기록을 보는 중이에요. 현재 연결로 돌아가서 보내세요.' : connected ? '텍스트나 링크를 입력하세요. 이미지도 붙여넣을 수 있어요.' : '기기 연결 후 텍스트나 링크를 입력하세요.'} value={text} maxLength={MAX_TEXT_LENGTH} disabled={!canSend} onChange={event => setText(event.target.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); sendText(); } }} onPaste={event => { const pasted = Array.from(event.clipboardData.files); if (pasted.length) { event.preventDefault(); files(pasted); } }} />
               <div className="composer-toolbar"><input ref={input} className="sr-only" type="file" id="files" multiple disabled={!canSend} onChange={event => { files(Array.from(event.target.files || [])); event.target.value = ''; }} /><button className="attach-button" disabled={!canSend} onClick={() => input.current?.click()}><Icon name="paperclip" size={18} />파일 첨부</button><label className="sr-only" htmlFor="files">전송할 파일 선택</label><span className="shortcut">Ctrl / ⌘ + Enter</span><button className="send-button" disabled={!canSend || !text.trim()} onClick={sendText}>보내기<Icon name="arrow" size={17} /></button></div>

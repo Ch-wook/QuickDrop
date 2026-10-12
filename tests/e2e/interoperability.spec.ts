@@ -1,10 +1,11 @@
 import { test, expect, firefox } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { browserOptions } from './browser-options';
 
 test('Chromium and Firefox exchange real data and a multi-chunk file', async ({ browser, browserName, baseURL }) => {
   test.skip(browserName !== 'chromium', 'Run the cross-engine test once, from the Chromium project.');
   const remoteBrowser = await firefox.launch();
-  const a = await browser.newPage(); const b = await remoteBrowser.newPage();
+  const a = await browser.newPage(); const b = await remoteBrowser.newPage(browserOptions(remoteBrowser));
   try {
     await a.goto(baseURL!);
     const link = a.getByRole('link', { name: '연결 링크', exact: true });

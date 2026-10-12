@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// The production browser CSP forbids eval. Set this before constructing schemas
+// so validation never probes new Function; the Node server can retain its JIT.
+if (typeof window !== 'undefined') z.config({ jitless: true });
+
 export const ROOM_ID = /^[A-Za-z0-9_-]{32}$/;
 export const TRANSFER_ID = /^[0-9a-f-]{36}$/i;
 export const CHUNK_SIZE = 16 * 1024; // Conservative across Safari, Firefox and Chromium.

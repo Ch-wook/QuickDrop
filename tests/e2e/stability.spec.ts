@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { unzipSync } from 'fflate';
+import { browserOptions } from './browser-options';
 
 async function connected(page: Page) { await expect(page.getByText('두 기기가 연결되었습니다. 바로 보내보세요.')).toBeVisible(); }
 async function send(page: Page, text: string) {
@@ -15,8 +17,8 @@ async function pair(a: Page, b: Page) {
 
 test('desktop peers: file picker, signaling recovery, channel repair, durable pair history and deletion', async ({ browser, baseURL }, testInfo) => {
   test.setTimeout(120000);
-  const aContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-  const bContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
+  const aContext = await browser.newContext({ ...browserOptions(browser), viewport: { width: 1440, height: 1000 } });
+  const bContext = await browser.newContext({ ...browserOptions(browser), viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
   // Capture the application's own transport objects to inject real failures.
   for (const context of [aContext, bContext]) await context.addInitScript(() => {
     const state = window as unknown as { qdSockets: WebSocket[]; qdChannels: RTCDataChannel[] };
@@ -50,6 +52,20 @@ test('desktop peers: file picker, signaling recovery, channel repair, durable pa
     await picker.setFiles({ name: 'pc-transfer.bin', mimeType: 'application/octet-stream', buffer: binary });
     await expect(b.getByRole('link', { name: 'pc-transfer.bin 다운로드' })).toBeVisible();
     await Promise.all([connected(a), connected(b)]);
+    await a.locator('input[type=file]').setInputFiles([
+      { name: '사진.txt', mimeType: 'text/plain', buffer: Buffer.from('첫째 파일') },
+      { name: '사진.txt', mimeType: 'text/plain', buffer: Buffer.from('둘째 파일') },
+    ]);
+    await expect(b.getByRole('checkbox', { name: /다운로드 선택/ })).toHaveCount(3);
+    await expect(a.locator('.download-toolbar')).toHaveCount(0);
+    await b.getByRole('checkbox', { name: '사진.txt 다운로드 선택', exact: true }).nth(0).check();
+    await b.getByRole('checkbox', { name: '사진.txt 다운로드 선택', exact: true }).nth(1).check();
+    const selectedZip = b.waitForEvent('download');
+    await b.getByRole('button', { name: '선택 다운로드 (2)', exact: true }).click();
+    const subset = unzipSync(await readFile((await (await selectedZip).path())!));
+    expect(Object.keys(subset)).toEqual(['사진.txt', '사진 (2).txt']);
+    expect(new TextDecoder().decode(subset['사진.txt'])).toBe('첫째 파일');
+    expect(new TextDecoder().decode(subset['사진 (2).txt'])).toBe('둘째 파일');
 
     // Signaling fails; the existing direct file channel should remain usable.
     await a.evaluate(() => (window as unknown as { qdSockets: WebSocket[] }).qdSockets.at(-1)!.close(4000, 'Test interruption'));
@@ -82,6 +98,11 @@ test('desktop peers: file picker, signaling recovery, channel repair, durable pa
     await expect(a.getByRole('textbox', { name: '보낼 텍스트 또는 링크' })).toBeDisabled();
     await b.getByRole('button', { name: '내 PC A 기록 열기', exact: true }).click();
     await expect(b.getByRole('link', { name: 'pc-transfer.bin 다운로드' })).toBeVisible();
+    const allZip = b.waitForEvent('download');
+    await b.getByRole('button', { name: '전체 다운로드 (3)', exact: true }).click();
+    const restored = unzipSync(await readFile((await (await allZip).path())!));
+    expect(Object.keys(restored)).toEqual(['pc-transfer.bin', '사진.txt', '사진 (2).txt']);
+    expect(restored['pc-transfer.bin']).toEqual(new Uint8Array(binary));
     await pair(a, b);
     await expect(a.getByText('PC A에서 PC B로', { exact: true })).toBeVisible();
     await expect(b.getByText('PC B에서 PC A로', { exact: true })).toBeVisible();
@@ -100,7 +121,7 @@ test('desktop peers: file picker, signaling recovery, channel repair, durable pa
     }
 
     // A different browser/device must not receive another pair's history.
-    const cContext = await browser.newContext(); const c = await cContext.newPage();
+    const cContext = await browser.newContext(browserOptions(browser)); const c = await cContext.newPage();
     try {
       await b.getByRole('button', { name: '새 연결 시작' }).click();
       await expect(a.getByRole('alert')).toContainText('상대 기기가 나갔습니다.');
@@ -150,7 +171,7 @@ test('desktop peers: file picker, signaling recovery, channel repair, durable pa
 
 for (const mode of ['disabled', 'quota'] as const) test(`local history fallback: ${mode}, transfer stays usable`, async ({ browser, baseURL }) => {
   test.skip(!!process.env.E2E_BASE_URL, 'Storage failure injection runs locally.');
-  const aContext = await browser.newContext(); const bContext = await browser.newContext({ acceptDownloads: true });
+  const aContext = await browser.newContext(browserOptions(browser)); const bContext = await browser.newContext({ ...browserOptions(browser), acceptDownloads: true });
   await bContext.addInitScript(mode => {
     if (mode === 'disabled') Object.defineProperty(window, 'indexedDB', { value: undefined });
     else {

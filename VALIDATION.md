@@ -1,5 +1,28 @@
 # QuickDrop 검증 기록
 
+## 2026-10-13 선택·전체 다운로드와 이름으로 기억하는 접속 링크
+
+- `npm test`: **10개 파일, 99개 통과**. ZIP 해독 후 바이너리·한글·중복 파일명·빈 파일, 256KiB 읽기 상한·진행률·취소·초과 용량·읽기 오류를 검사했습니다.
+- `npm run build`: TypeScript·프런트·서버·사전 압축 성공. ZIP 모듈을 다운로드 버튼 클릭 시 불러오는 별도 자산으로 분리했습니다.
+- 새 접속 링크 **https://da.gd/quickdrop** 실제 발급 HTTP 200. HTML 신규 링크 안내의 목적지와 text/plain HTTP 302의 Location이 기존 공개 홈페이지와 일치했습니다.
+- Chromium 393×852 모바일 크기 화면에서 새 짧은 주소·목적지 클릭·QuickDrop 화면·6자리 코드와 최종 origin을 확인했습니다. 기록을 보관하는 운영 origin은 유지합니다.
+- ZIP 코드에서는 파일을 재압축하지 않고 256KiB씩 읽으며 취소 후 다음 청크를 읽지 않는 것을 검사했습니다. 새 방 선택·기록 비우기는 ZIP 준비를 중단하고 생성한 URL을 정리합니다.
+- **검사 환경 제한:** 설치된 Windows Playwright 1.63 Firefox가 기존 운영 페이지와 새 빌드의 엄격한 CSP 페이지에서 자동 화면 조회를 멈추는 현상을 재현했습니다. `E2E_FIREFOX_CSP_WORKAROUND=1`을 지정한 검사에서만 Firefox 컨텍스트의 `bypassCSP`를 켜 기능을 검사합니다. 기본값은 꺼져 있고 배포 서버의 CSP를 수정하지 않습니다. Chromium은 우회 없이 실제 운영 CSP에서 검사하며 CSP 위반도 확인합니다. 따라서 Firefox 결과는 엄격한 CSP에서의 물리 Firefox 검증을 의미하지 않습니다.
+- Firefox에서는 요청 가로채기 해제 후 새로고침 시 위 우회가 유지되지 않는 검사 도구 문제도 확인했습니다. ZIP 모듈을 지연시켜 취소하는 브라우저 오류 주입은 Chromium에서 실행하고 Firefox는 파일·기록·선택·전체 다운로드를 검사합니다. 작업 도중 취소 자체는 단위 검사와 Chromium E2E로 확인합니다.
+- Windows WebKit의 WebRTC 미지원과 IndexedDB Blob 제한에 따른 검사는 skip이며 실제 iPhone/Android에서 ZIP을 파일 앱에 저장하는 검증을 대체하지 않습니다.
+- 운영 빌드 로컬 Playwright 최종 실행: **19개 통과/8개 skip**. Chromium·Firefox의 실제 수신 파일 선택 ZIP, 재접속 전 과거 방 전체 ZIP과 원본 바이너리 일치, 중복 한글 파일명, 0바이트 파일, 선택 분리, 삭제 후 새로고침, 모바일 가로 넘침 방지, 기존 연결·전송·복구·저장 장애 검사를 확인했습니다. 8개 skip은 교차 엔진 중복 2개, Windows WebKit WebRTC 미지원 5개, Blob 저장 미지원 1개입니다.
+- 초기 JS `index-C4shIWxm.js` 365.19kB, CSS `index-CuKMhOV6.css`, ZIP 지연 로딩 자산 `download-zip-Dsb4D7V4.js` 6.37kB(gzip 3.10kB). ZIP 사용 전에는 ZIP 모듈을 불러오지 않습니다. 브라우저 Zod 검증은 JIT를 사용하지 않아 운영 CSP의 eval 금지와 맞춥니다.
+
+로컬 재현 명령(PowerShell):
+
+```powershell
+$env:E2E_PRODUCTION='1'
+$env:NODE_ENV='production'
+# 이 Windows Firefox 자동 검사 환경에서만 필요한 옵션
+$env:E2E_FIREFOX_CSP_WORKAROUND='1'
+npx playwright test
+```
+
 ## 2026-10-09 짧은 접속 링크
 
 - da.gd 공식 단축 API: **HTTP 200, `https://da.gd/qd20`** 실제 발급.
