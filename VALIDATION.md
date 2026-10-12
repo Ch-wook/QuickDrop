@@ -12,6 +12,10 @@
 - Windows WebKit의 WebRTC 미지원과 IndexedDB Blob 제한에 따른 검사는 skip이며 실제 iPhone/Android에서 ZIP을 파일 앱에 저장하는 검증을 대체하지 않습니다.
 - 운영 빌드 로컬 Playwright 최종 실행: **19개 통과/8개 skip**. Chromium·Firefox의 실제 수신 파일 선택 ZIP, 재접속 전 과거 방 전체 ZIP과 원본 바이너리 일치, 중복 한글 파일명, 0바이트 파일, 선택 분리, 삭제 후 새로고침, 모바일 가로 넘침 방지, 기존 연결·전송·복구·저장 장애 검사를 확인했습니다. 8개 skip은 교차 엔진 중복 2개, Windows WebKit WebRTC 미지원 5개, Blob 저장 미지원 1개입니다.
 - 초기 JS `index-C4shIWxm.js` 365.19kB, CSS `index-CuKMhOV6.css`, ZIP 지연 로딩 자산 `download-zip-Dsb4D7V4.js` 6.37kB(gzip 3.10kB). ZIP 사용 전에는 ZIP 모듈을 불러오지 않습니다. 브라우저 Zod 검증은 JIT를 사용하지 않아 운영 CSP의 eval 금지와 맞춥니다.
+- 기능 코드 `b5a1098`, Railway 배포 `8c45ff7f-674b-4627-8677-6e9c6c98b12e`: **success**. 공개 `deploy:verify`는 초기 JS/CSS와 지연 로딩 QR·ZIP 모듈의 해시·내용·Brotli·캐시, 검색 설정·공개 주소·200MiB 제한 일치를 확인했습니다.
+- 공개 Chromium **2개 통과(23.3초)**. 실제 전송된 파일의 선택 ZIP과 상대 미연결 과거 방의 전체 ZIP을 해독해 원본 바이너리, 한글·중복 파일명을 확인했습니다. QR/WSS/WebRTC·파일 선택 창 복귀·신호/채널 복구·이름·기록 복원·삭제도 검사했습니다.
+- 공개 Firefox **2개 통과(24.0초)**. 위와 같은 검사에 `E2E_FIREFOX_CSP_WORKAROUND=1`을 사용했습니다. 운영 서버의 CSP를 변경하지 않았으며 엄격한 CSP의 Firefox 검증은 앞서 설명한 검사 환경 제약이 남아 있습니다. 두 엔진의 검사 시작을 약 2분 간격으로 두어 기존 JOIN 제한을 유지했습니다.
+- GitHub `main` 푸시 성공 및 인증된 GitHub README API 응답을 로컬 문서와 비교해 새 주소·사용 방법 일치를 확인했습니다. 커밋의 정규화된 `git diff --check` 통과. 배포·재검증 결과는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 있습니다.
 
 로컬 재현 명령(PowerShell):
 

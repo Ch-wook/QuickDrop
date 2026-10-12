@@ -44,7 +44,7 @@ ZIP 다운로드는 **현재 보고 있는 대화방의 전송이 완료된 받�
 
 전체 프로젝트 요약은 [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md), 구현 현황과 남은 작업은 [PROJECT_STATUS.md](./PROJECT_STATUS.md), 파일·API 구성은 [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), 검사 결과는 [VALIDATION.md](./VALIDATION.md)를 참고하세요.
 
-서비스 주소: **https://dropgo.up.railway.app**. 최신 화면은 받은 파일의 선택·전체 ZIP 다운로드와 상대별 대화방을 지원합니다. 기존에 열린 페이지는 **두 기기에서 한 번 새로고침**하세요. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 다운로드 방법은 [BULK_DOWNLOADS.md](./BULK_DOWNLOADS.md), 연결과 보관 범위는 [RELIABILITY.md](./RELIABILITY.md), 검사 환경·결과는 [VALIDATION.md](./VALIDATION.md)에 있습니다.
+서비스 주소: **https://dropgo.up.railway.app**. 2026-10-13 받은 파일의 선택·전체 ZIP 다운로드를 배포하고 공개 사이트의 파일 전송·ZIP 저장을 확인했습니다. 상대별 대화방과 이전 파일 다운로드도 지원합니다. 기존에 열린 페이지는 **두 기기에서 한 번 새로고침**하세요. 배포 기록은 [DEPLOYMENT.md](./DEPLOYMENT.md), 다운로드 방법은 [BULK_DOWNLOADS.md](./BULK_DOWNLOADS.md), 연결과 보관 범위는 [RELIABILITY.md](./RELIABILITY.md), 검사 환경·결과는 [VALIDATION.md](./VALIDATION.md)에 있습니다.
 
 상대별 ‘이전 대화방’ 목록과 이름 저장을 추가했습니다. 다른 기기와 연결했다가 돌아와도 같은 브라우저 조합의 기록을 이어가며 연결 전에도 기록을 열어볼 수 있습니다. [사용 방법·보관 범위](./HISTORY_ROOMS.md), [전체 프로젝트 정리](./PROJECT_OVERVIEW.md)
 

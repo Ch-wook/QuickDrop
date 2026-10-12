@@ -6,6 +6,14 @@
 
 새 주소 **https://da.gd/quickdrop** 을 실제 발급하고 모바일 크기 브라우저로 홈페이지·6자리 코드 표시를 확인했습니다. `da.gd/` 뒤에 숫자 없이 서비스 이름을 입력합니다. 신규 링크 안내가 나오면 QuickDrop 홈페이지 주소를 누릅니다. 원래 서비스 주소·`PUBLIC_URL`·QR·IndexedDB origin은 **https://dropgo.up.railway.app**을 유지합니다. [등록 확인](./SHORT_LINK.md)
 
+기능 코드 [`b5a1098c91813d45d230c10e7e52491a8ceb8267`](https://github.com/Ch-wook/QuickDrop/commit/b5a1098c91813d45d230c10e7e52491a8ceb8267)를 `main`에 푸시했고 Railway 배포 **`8c45ff7f-674b-4627-8677-6e9c6c98b12e`의 success**를 확인했습니다. GitHub README의 새 접속 주소·다운로드 사용법이 로컬 문서와 일치합니다.
+
+공개 `deploy:verify` 통과: 초기 JS `index-C4shIWxm.js`, CSS `index-CuKMhOV6.css`, QR 모듈 `browser-CqDbEFy1.js`, ZIP 모듈 `download-zip-Dsb4D7V4.js`의 해시·내용·Brotli·캐시가 로컬 빌드와 일치합니다. healthcheck·공개 주소·검색 설정·파일당 200MiB 설정도 확인했습니다. 로컬 단위·통합 **99개**, 운영 빌드 E2E **19개 통과/8개 skip**, 빌드·타입 검사 통과입니다. [검사 조건과 Firefox·WebKit 제한](./VALIDATION.md)
+
+공개 Chromium **2개 통과(23.3초)**: 실제 QR/WSS/WebRTC와 PC 간 파일 수신 후 선택 ZIP, 재접속 전 과거 대화방의 전체 ZIP을 내려받아 한글·중복 파일명과 원본 바이너리 일치를 확인했습니다. 기존 신호·채널 복구, 이름·기록 복원·삭제 검사도 유지했습니다. 양쪽 기기에서 새로고침하면 새 다운로드 버튼을 사용할 수 있습니다.
+
+공개 Firefox도 **2개 통과(24.0초)**로 같은 전송·선택 ZIP·이전 방 전체 ZIP을 확인했습니다. 설치된 Windows 자동 검사 도구의 CSP 문제로 Firefox 검사 컨텍스트에만 명시적 우회 옵션을 적용했습니다. 운영 CSP는 유지합니다. 기본 JOIN 요청 한도를 유지하도록 두 공개 엔진의 검사 시작 간격은 약 2분을 두었습니다. 물리 휴대폰의 파일 앱 저장을 확인한 결과는 아닙니다.
+
 ## 2026-10-09 짧은 접속 링크 등록
 
 **https://da.gd/qd20** 을 무료로 등록해 기존 **https://dropgo.up.railway.app/** 에 접속하는 주소를 만들었습니다. is.gd 등록 요청은 데이터베이스 오류로 실패했습니다. da.gd의 신규 링크 안내 화면에서는 목적지 주소를 누릅니다. 등록 응답과 HTML 안내의 목적지, 실제 홈페이지·healthcheck의 HTTP 200을 확인했습니다. 이 작업은 사용자 문서와 접속 링크 등록이며 서비스 코드·Railway 도메인·`PUBLIC_URL`·검색 canonical을 변경하지 않았습니다. [README 사용 방법](./README.md#짧은-주소로-바로-사용하기), [확인 기록](./SHORT_LINK.md)

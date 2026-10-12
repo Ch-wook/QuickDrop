@@ -24,7 +24,7 @@
 
 **양방향 전송 MVP의 구현·최적화·Railway 배포를 완료했습니다.** 두 브라우저를 연결해 텍스트·링크·이미지·파일을 주고받습니다. 저장소는 [Ch-wook/QuickDrop](https://github.com/Ch-wook/QuickDrop), 연결된 배포 소스 브랜치는 `main`입니다.
 
-Railway 공개 주소는 **https://dropgo.up.railway.app**입니다. CLI의 `Unauthorized`는 남아 있지만 GitHub Source를 통한 배포는 성공했습니다. 기능 검증 기준 코드 `91aba3b` 배포 이후 문서 커밋 `d783cd9`를 푸시해 자동 배포 시작과 성공까지 확인했습니다. 이전 `trycloudflare.com` 주소는 일회성 개발 터널이며 운영 주소가 아닙니다.
+Railway 공개 주소는 **https://dropgo.up.railway.app**이며 짧은 입구는 **https://da.gd/quickdrop**입니다. 최신 선택·전체 다운로드 코드 `b5a1098`의 GitHub 푸시·Railway 배포 성공, ZIP 모듈을 포함한 공개 자산 일치와 공개 Chromium·Firefox **4개 검사 통과**를 확인했습니다(Firefox 검사 환경 조건은 [VALIDATION.md](./VALIDATION.md)). CLI의 `Unauthorized`는 남아 있지만 GitHub Source 자동 배포로 진행했습니다. 이전 `trycloudflare.com` 주소는 일회성 개발 터널이며 운영 주소가 아닙니다. 배포 식별자와 공개 결과는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 기록합니다.
 
 사용자는 휴대폰 연결 성공을 알려왔습니다. 휴대폰 OS·브라우저 종류와 실제 파일 전송·저장 성공 여부는 아직 확인하지 않았습니다.
 

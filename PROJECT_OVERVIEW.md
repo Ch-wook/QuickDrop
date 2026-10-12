@@ -13,7 +13,7 @@ QuickDrop은 앱 설치와 로그인 없이 두 기기를 QR 또는 6자리 코�
 
 ## 현재 운영 상태
 
-2026-10-13 선택·전체 ZIP 다운로드 변경의 단위·통합 **99개**, 운영 빌드 E2E **19개 통과/8개 skip**, 빌드·타입 검사를 확인했습니다. ZIP 해독 바이트·파일명·과거 방 다운로드·선택 분리·삭제·모바일 너비를 검사했습니다. Firefox는 설치된 Windows 검사 도구의 CSP 우회 옵션을 사용했으며 운영 CSP는 유지합니다. 최신 공개 배포 식별자와 서버 검사는 [DEPLOYMENT.md](./DEPLOYMENT.md), 검사 조건은 [VALIDATION.md](./VALIDATION.md)에 있습니다. 다음 문단은 앞선 대화방 버전의 배포 이력입니다.
+2026-10-13 선택·전체 ZIP 다운로드 코드 **`b5a1098`**의 GitHub 푸시·Railway 배포 success와 ZIP 모듈을 포함한 공개 자산 일치를 확인했습니다. 단위·통합 **99개**, 운영 빌드 E2E **19개 통과/8개 skip**, 공개 Chromium·Firefox **4개**, 빌드·타입 검사를 확인했습니다. ZIP 해독 바이트·파일명·과거 방 다운로드·선택 분리·삭제·모바일 너비를 검사했습니다. Firefox는 설치된 Windows 검사 도구의 CSP 우회 옵션을 사용했으며 운영 CSP는 유지합니다. 배포 식별자는 [DEPLOYMENT.md](./DEPLOYMENT.md), 검사 조건·물리 휴대폰 미검증 범위는 [VALIDATION.md](./VALIDATION.md)에 있습니다. 다음 문단은 앞선 대화방 버전의 배포 이력입니다.
 
 대화방 목록·이름 저장·연결 전 기록 열람 코드 `9abc725`의 GitHub 푸시·Railway 배포 성공과 공개 자산 일치를 확인했습니다. 로컬 단위·통합 **92개**, 운영 빌드 E2E **17개 통과/7개 skip**, 공개 Chromium·Firefox E2E **4개 통과**입니다. 상세 결과는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 있습니다. 아래는 앞선 연결 복구 버전의 배포 확인입니다.
 
